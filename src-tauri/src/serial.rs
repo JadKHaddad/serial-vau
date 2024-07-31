@@ -6,6 +6,16 @@ pub struct SerialPort {
     name: String,
 }
 
+impl SerialPort {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 impl From<SerialPortInfo> for SerialPort {
     fn from(value: SerialPortInfo) -> Self {
         Self {

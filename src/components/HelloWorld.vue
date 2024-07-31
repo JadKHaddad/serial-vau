@@ -37,12 +37,9 @@ const serialPorts = ref<SerialPort[]>([]);
 let unlistenSerialPortsEvent: UnlistenFn;
 
 onMounted(async () => {
-  refreshSerialPorts();
+  getSerialPorts();
 
   unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
-    console.debug(event)
-    console.log(event)
-
     serialPorts.value = event.payload as SerialPort[];
   });
 });
@@ -56,12 +53,21 @@ onUnmounted(() => {
 const refreshSerialPorts = () => {
   invoke('refresh_serial_ports')
     .then((response) => {
-      console.debug(response)
-      console.log(response)
     })
     .catch((error) => {
       console.error(error);
     });
 };
+
+const getSerialPorts = () => {
+  invoke('get_serial_ports')
+    .then((response) => {
+      serialPorts.value = response as SerialPort[];
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};
+
 
 </script>

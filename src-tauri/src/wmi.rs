@@ -1,100 +1,98 @@
-use std::{collections::HashMap, thread, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use anyhow::Context;
 use serde::Deserialize;
-use tauri::{AppHandle, Manager};
-use wmi::{COMLibrary, FilterValue, WMIConnection};
+use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
+
+use crate::serial::SerialPort;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "Win32_SerialPort")]
-pub struct SerialPort {
+pub struct SerialPortEvent {
     #[serde(rename = "Name")]
-    pub name: String,
-    #[serde(rename = "SystemName")]
-    pub system_name: String,
+    name: String,
+}
+
+impl From<SerialPortEvent> for SerialPort {
+    fn from(value: SerialPortEvent) -> Self {
+        Self::new(value.name)
+    }
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "__InstanceDeletionEvent")]
 #[serde(rename_all = "PascalCase")]
-pub struct SerialDeletion {
-    pub target_instance: SerialPort,
+struct SerialDeletion {
+    target_instance: SerialPortEvent,
+}
+
+impl From<SerialDeletion> for SerialPort {
+    fn from(value: SerialDeletion) -> Self {
+        Self::new(value.target_instance.name)
+    }
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "__InstanceCreationEvent")]
 #[serde(rename_all = "PascalCase")]
-pub struct SerialCreation {
-    pub target_instance: SerialPort,
+struct SerialCreation {
+    target_instance: SerialPortEvent,
 }
 
-fn filters() -> anyhow::Result<HashMap<String, FilterValue>> {
-    let mut filters = HashMap::<String, FilterValue>::new();
-    filters.insert(
-        "TargetInstance".to_owned(),
-        FilterValue::is_a::<SerialPort>().context("Failed to create filter")?,
-    );
-
-    Ok(filters)
+impl From<SerialCreation> for SerialPort {
+    fn from(value: SerialCreation) -> Self {
+        Self::new(value.target_instance.name)
+    }
 }
 
-pub fn spawn_serial_events_watchers(app: AppHandle) -> anyhow::Result<()> {
-    let app_handle_creation = app.app_handle().clone();
-    let app_handle_deletion = app.app_handle().clone();
+pub struct Con {
+    wmi_con: WMIConnection,
+}
 
-    thread::spawn(move || {
-        tracing::debug!("Starting serial creation events watcher");
-
+impl Con {
+    pub fn new() -> anyhow::Result<Con> {
         let com_con = COMLibrary::new().context("Failed to create COM library")?;
         let wmi_con = WMIConnection::new(com_con).context("Failed to create WMI connection")?;
-        let filters = filters()?;
+        Ok(Self { wmi_con })
+    }
 
-        let creation_iter = wmi_con
+    fn filters() -> anyhow::Result<HashMap<String, FilterValue>> {
+        let mut filters = HashMap::<String, FilterValue>::new();
+        filters.insert(
+            "TargetInstance".to_owned(),
+            FilterValue::is_a::<SerialPortEvent>().context("Failed to create filter")?,
+        );
+
+        Ok(filters)
+    }
+
+    pub fn creation_iter<'a>(
+        &'a self,
+    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPort, WMIError>> + 'a> {
+        let filters = Con::filters()?;
+
+        let creation_iter = self
+            .wmi_con
             .filtered_notification::<SerialCreation>(&filters, Some(Duration::from_millis(300)))
-            .context("Failed to create creation iterator")?;
+            .context("Failed to create creation iterator")?
+            .map(|item| item.map(Into::into));
 
-        for creation_event in creation_iter {
-            let Ok(creation_event) = creation_event else {
-                break;
-            };
+        Ok(creation_iter)
+    }
 
-            tracing::trace!(name=%creation_event.target_instance.name, "Serial creation event detected");
+    pub fn deletion_iter<'a>(
+        &'a self,
+    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPort, WMIError>> + 'a> {
+        let filters = Con::filters()?;
 
-            if let Ok(ports) = crate::serial::available_ports() {
-                let _ = app_handle_creation.emit_all("serial_ports_event", &ports);
-            }
-        }
-
-        anyhow::Result::<()>::Ok(())
-    });
-
-    thread::spawn(move || {
-        tracing::debug!("Starting serial deletion events watcher");
-
-        let com_con = COMLibrary::new().context("Failed to create COM library")?;
-        let wmi_con = WMIConnection::new(com_con).context("Failed to create WMI connection")?;
-        let filters = filters()?;
-
-        let deletion_iter = wmi_con
+        let deletion_iter = self
+            .wmi_con
             .filtered_notification::<SerialDeletion>(&filters, Some(Duration::from_millis(300)))
-            .context("Failed to create deletion iterator")?;
+            .context("Failed to create deletion iterator")?
+            .map(|item| item.map(Into::into));
 
-        for deletion_event in deletion_iter {
-            let Ok(deletion_event) = deletion_event else {
-                break;
-            };
-
-            tracing::trace!(name=%deletion_event.target_instance.name, "Serial deletion event detected");
-
-            if let Ok(ports) = crate::serial::available_ports() {
-                let _ = app_handle_deletion.emit_all("serial_ports_event", &ports);
-            }
-        }
-
-        anyhow::Result::<()>::Ok(())
-    });
-
-    Ok(())
+        Ok(deletion_iter)
+    }
 }
 
 #[cfg(test)]
@@ -114,7 +112,7 @@ mod test {
 
         filters.insert(
             "TargetInstance".to_owned(),
-            FilterValue::is_a::<SerialPort>().expect("Failed to create filter"),
+            FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
         );
 
         let mut deletion_stream = wmi_con
@@ -128,7 +126,7 @@ mod test {
 
         filters.insert(
             "TargetInstance".to_owned(),
-            FilterValue::is_a::<SerialPort>().expect("Failed to create filter"),
+            FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
         );
 
         let mut creation_stream = wmi_con
