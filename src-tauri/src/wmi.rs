@@ -2,6 +2,7 @@ use std::{collections::HashMap, thread, time::Duration};
 
 use anyhow::Context;
 use serde::Deserialize;
+use tauri::{AppHandle, Manager};
 use wmi::{COMLibrary, FilterValue, WMIConnection};
 
 #[derive(Deserialize, Debug)]
@@ -37,10 +38,10 @@ fn filters() -> anyhow::Result<HashMap<String, FilterValue>> {
     Ok(filters)
 }
 
-pub fn spawn_serial_events_watchers(
-    on_creation_event: fn(SerialCreation) -> (),
-    on_deletion_event: fn(SerialDeletion) -> (),
-) -> anyhow::Result<()> {
+pub fn spawn_serial_events_watchers(app: AppHandle) -> anyhow::Result<()> {
+    let app_handle_creation = app.app_handle().clone();
+    let app_handle_deletion = app.app_handle().clone();
+
     thread::spawn(move || {
         tracing::debug!("Starting serial creation events watcher");
 
@@ -59,7 +60,9 @@ pub fn spawn_serial_events_watchers(
 
             tracing::trace!(name=%creation_event.target_instance.name, "Serial creation event detected");
 
-            on_creation_event(creation_event);
+            if let Ok(ports) = crate::serial::available_ports() {
+                let _ = app_handle_creation.emit_all("serial_ports_event", &ports);
+            }
         }
 
         anyhow::Result::<()>::Ok(())
@@ -83,7 +86,9 @@ pub fn spawn_serial_events_watchers(
 
             tracing::trace!(name=%deletion_event.target_instance.name, "Serial deletion event detected");
 
-            on_deletion_event(deletion_event);
+            if let Ok(ports) = crate::serial::available_ports() {
+                let _ = app_handle_deletion.emit_all("serial_ports_event", &ports);
+            }
         }
 
         anyhow::Result::<()>::Ok(())

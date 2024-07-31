@@ -1,6 +1,7 @@
+use serde::Serialize;
 use tokio_serial::{Error as TokioSerialError, SerialPortInfo};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SerialPort {
     name: String,
 }
