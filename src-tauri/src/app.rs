@@ -42,11 +42,12 @@ pub fn run() -> anyhow::Result<()> {
                 let creation_iter = watcher.creation_iter()?;
 
                 for serial_port in creation_iter {
-                    let Ok(serial_port) = serial_port else {
-                        break;
-                    };
-
-                    tracing::trace!(name=%serial_port.name(), "Serial creation event detected");
+                    match serial_port  {
+                        Ok(serial_port) => {
+                            tracing::trace!(name=%serial_port.name(), "Serial creation event detected");
+                        },
+                        Err(err) => {tracing::warn!(%err, "Serial creation event error");}
+                    }
 
                     let _ = refresh_serial_ports_intern(&app_handle_creation);
                 }
@@ -63,11 +64,14 @@ pub fn run() -> anyhow::Result<()> {
                 let deletion_iter = watcher.deletion_iter()?;
 
                 for serial_port in deletion_iter {
-                    let Ok(serial_port) = serial_port else {
-                        break;
-                    };
-
-                    tracing::trace!(name=%serial_port.name(), "Serial deletion event detected");
+                    match serial_port  {
+                        Ok(serial_port) => {
+                            tracing::trace!(name=%serial_port.name(), "Serial deletion event detected");
+                        },
+                        Err(err) =>{
+                            tracing::warn!(%err, "Serial deletion event error");
+                        }
+                    }
 
                     let _ = refresh_serial_ports_intern(&app_handle_deletion);
                 }

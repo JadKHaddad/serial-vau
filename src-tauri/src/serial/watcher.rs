@@ -7,8 +7,8 @@ use crate::serial::SerialPortModel;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "Win32_SerialPort")]
+#[serde(rename_all = "PascalCase")]
 pub struct SerialPortEvent {
-    #[serde(rename = "Name")]
     name: String,
 }
 
@@ -134,7 +134,7 @@ mod test {
 
     #[tokio::test]
     #[ignore]
-    // cargo test --package serial-vau --lib -- wmi::test::watch --exact --show-output --ignored --nocapture
+    // cargo test --package serial-vau --lib -- serial::watcher::test::watch --exact --show-output --ignored --nocapture
     async fn watch() {
         let com_con = COMLibrary::new().expect("Failed to create COM library");
         let wmi_con = WMIConnection::new(com_con).expect("Failed to create WMI connection");
