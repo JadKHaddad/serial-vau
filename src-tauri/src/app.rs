@@ -2,6 +2,8 @@ use anyhow::Context;
 use error::AppError;
 use tauri::{AppHandle, Manager};
 
+use crate::serial::watcher::Watcher as SerialWatcher;
+
 pub mod error;
 pub mod state;
 
@@ -36,8 +38,8 @@ pub fn run() -> anyhow::Result<()> {
             std::thread::spawn(move || {
                 tracing::debug!("Starting serial creation events watcher");
 
-                let con = crate::wmi::WmiCon::new()?;
-                let creation_iter = con.creation_iter()?;
+                let watcher = SerialWatcher::new()?;
+                let creation_iter = watcher.creation_iter()?;
 
                 for serial_port in creation_iter {
                     let Ok(serial_port) = serial_port else {
@@ -57,8 +59,8 @@ pub fn run() -> anyhow::Result<()> {
             std::thread::spawn(move || {
                 tracing::debug!("Starting serial deletion events watcher");
 
-                let con = crate::wmi::WmiCon::new()?;
-                let deletion_iter = con.deletion_iter()?;
+                let watcher = SerialWatcher::new()?;
+                let deletion_iter = watcher.deletion_iter()?;
 
                 for serial_port in deletion_iter {
                     let Ok(serial_port) = serial_port else {

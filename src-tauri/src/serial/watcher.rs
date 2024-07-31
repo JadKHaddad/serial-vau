@@ -45,7 +45,7 @@ impl From<SerialCreation> for SerialPortModel {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum NewWmiConError {
+pub enum NewWatcherError {
     #[error("Failed to create library: {0}")]
     Lib(#[source] WMIError),
     #[error("Failed to create connection: {0}")]
@@ -78,14 +78,14 @@ pub enum CreateIterError {
     ),
 }
 
-pub struct WmiCon {
+pub struct Watcher {
     wmi_con: WMIConnection,
 }
 
-impl WmiCon {
-    pub fn new() -> Result<WmiCon, NewWmiConError> {
-        let com_con = COMLibrary::new().map_err(NewWmiConError::Lib)?;
-        let wmi_con = WMIConnection::new(com_con).map_err(NewWmiConError::Con)?;
+impl Watcher {
+    pub fn new() -> Result<Watcher, NewWatcherError> {
+        let com_con = COMLibrary::new().map_err(NewWatcherError::Lib)?;
+        let wmi_con = WMIConnection::new(com_con).map_err(NewWatcherError::Con)?;
         Ok(Self { wmi_con })
     }
 
@@ -102,7 +102,7 @@ impl WmiCon {
     pub fn creation_iter<'a>(
         &'a self,
     ) -> Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a, CreateIterError> {
-        let filters = WmiCon::filters()?;
+        let filters = Watcher::filters()?;
 
         let creation_iter = self
             .wmi_con
@@ -115,7 +115,7 @@ impl WmiCon {
     pub fn deletion_iter<'a>(
         &'a self,
     ) -> Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a, CreateIterError> {
-        let filters = WmiCon::filters()?;
+        let filters = Watcher::filters()?;
 
         let deletion_iter = self
             .wmi_con

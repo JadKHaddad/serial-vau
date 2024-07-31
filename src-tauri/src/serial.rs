@@ -1,6 +1,8 @@
 use serde::Serialize;
 use tokio_serial::{Error as TokioSerialError, SerialPortInfo};
 
+pub mod watcher;
+
 #[derive(Debug, Serialize)]
 pub struct SerialPortModel {
     name: String,
