@@ -2,11 +2,11 @@ use serde::Serialize;
 use tokio_serial::{Error as TokioSerialError, SerialPortInfo};
 
 #[derive(Debug, Serialize)]
-pub struct SerialPort {
+pub struct SerialPortModel {
     name: String,
 }
 
-impl SerialPort {
+impl SerialPortModel {
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -16,7 +16,7 @@ impl SerialPort {
     }
 }
 
-impl From<SerialPortInfo> for SerialPort {
+impl From<SerialPortInfo> for SerialPortModel {
     fn from(value: SerialPortInfo) -> Self {
         Self {
             name: value.port_name,
@@ -24,8 +24,8 @@ impl From<SerialPortInfo> for SerialPort {
     }
 }
 
-/// Returns a list of all serial ports on system mapped to [`SerialPort`].
-pub fn available_ports() -> Result<Vec<SerialPort>, TokioSerialError> {
+/// Returns a list of all serial ports on system mapped to [`SerialPortModel`].
+pub fn available_port_models() -> Result<Vec<SerialPortModel>, TokioSerialError> {
     Ok(tokio_serial::available_ports()?
         .into_iter()
         .map(Into::into)
@@ -39,7 +39,7 @@ mod test {
     fn available_ports() {
         println!(
             "{:?}",
-            super::available_ports().expect("Failed to get available ports")
+            super::available_port_models().expect("Failed to get available ports")
         )
     }
 }

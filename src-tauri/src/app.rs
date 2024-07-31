@@ -7,7 +7,8 @@ pub mod state;
 pub fn refresh_serial_ports(app: AppHandle) -> Result<(), String> {
     tracing::info!("Refreshing serial ports");
 
-    let ports = crate::serial::available_ports().map_err(|err| err.to_string())?;
+    let ports = crate::serial::available_port_models().map_err(|err| err.to_string())?;
+
     app.emit_all("serial_ports_event", &ports)
         .map_err(|err| err.to_string())?;
 
@@ -33,7 +34,7 @@ pub fn run() -> anyhow::Result<()> {
 
                     tracing::trace!(name=%serial_port.name(), "Serial creation event detected");
 
-                    if let Ok(ports) = crate::serial::available_ports() {
+                    if let Ok(ports) = crate::serial::available_port_models() {
                         let _ = app_handle_creation.emit_all("serial_ports_event", &ports);
                     }
                 }
@@ -56,7 +57,7 @@ pub fn run() -> anyhow::Result<()> {
 
                     tracing::trace!(name=%serial_port.name(), "Serial deletion event detected");
 
-                    if let Ok(ports) = crate::serial::available_ports() {
+                    if let Ok(ports) = crate::serial::available_port_models() {
                         let _ = app_handle_deletion.emit_all("serial_ports_event", &ports);
                     }
                 }

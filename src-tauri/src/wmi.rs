@@ -4,7 +4,7 @@ use anyhow::Context;
 use serde::Deserialize;
 use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
 
-use crate::serial::SerialPort;
+use crate::serial::SerialPortModel;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "Win32_SerialPort")]
@@ -13,7 +13,7 @@ pub struct SerialPortEvent {
     name: String,
 }
 
-impl From<SerialPortEvent> for SerialPort {
+impl From<SerialPortEvent> for SerialPortModel {
     fn from(value: SerialPortEvent) -> Self {
         Self::new(value.name)
     }
@@ -26,7 +26,7 @@ struct SerialDeletion {
     target_instance: SerialPortEvent,
 }
 
-impl From<SerialDeletion> for SerialPort {
+impl From<SerialDeletion> for SerialPortModel {
     fn from(value: SerialDeletion) -> Self {
         Self::new(value.target_instance.name)
     }
@@ -39,7 +39,7 @@ struct SerialCreation {
     target_instance: SerialPortEvent,
 }
 
-impl From<SerialCreation> for SerialPort {
+impl From<SerialCreation> for SerialPortModel {
     fn from(value: SerialCreation) -> Self {
         Self::new(value.target_instance.name)
     }
@@ -68,7 +68,7 @@ impl Con {
 
     pub fn creation_iter<'a>(
         &'a self,
-    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPort, WMIError>> + 'a> {
+    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a> {
         let filters = Con::filters()?;
 
         let creation_iter = self
@@ -82,7 +82,7 @@ impl Con {
 
     pub fn deletion_iter<'a>(
         &'a self,
-    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPort, WMIError>> + 'a> {
+    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a> {
         let filters = Con::filters()?;
 
         let deletion_iter = self

@@ -1,11 +1,11 @@
 use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
 
-use crate::serial::SerialPort;
+use crate::serial::SerialPortModel;
 
 #[derive(Debug)]
 pub struct OpenSerialPort {
-    serial_port: SerialPort,
+    serial_port: SerialPortModel,
     cancellation_token: CancellationToken,
 }
 
