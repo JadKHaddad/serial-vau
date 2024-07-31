@@ -1,8 +1,6 @@
 use anyhow::Context;
 use tauri::{AppHandle, Manager};
 
-use crate::serial::SerialPort;
-
 pub mod state;
 
 #[tauri::command]
@@ -14,15 +12,6 @@ pub fn refresh_serial_ports(app: AppHandle) -> Result<(), String> {
         .map_err(|err| err.to_string())?;
 
     Ok(())
-}
-
-#[tauri::command]
-pub fn get_serial_ports() -> Result<Vec<SerialPort>, String> {
-    tracing::info!("Getting serial ports");
-
-    let ports = crate::serial::available_ports().map_err(|err| err.to_string())?;
-
-    Ok(ports)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -49,6 +38,8 @@ pub fn run() -> anyhow::Result<()> {
                     }
                 }
 
+                tracing::debug!("Serial creation events watcher terminated");
+
                 anyhow::Result::<()>::Ok(())
             });
 
@@ -70,15 +61,14 @@ pub fn run() -> anyhow::Result<()> {
                     }
                 }
 
+                tracing::debug!("Serial deletion events watcher terminated");
+
                 anyhow::Result::<()>::Ok(())
             });
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            get_serial_ports,
-            refresh_serial_ports
-        ])
+        .invoke_handler(tauri::generate_handler![refresh_serial_ports])
         .run(tauri::generate_context!())
         .context("Error while running tauri application")
 }
