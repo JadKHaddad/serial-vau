@@ -1,11 +1,10 @@
 [package]
-name = "app"
+name = "serial-vau"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 license = ""
 repository = ""
-default-run = "app"
 edition = "2021"
 rust-version = "1.60"
 
@@ -19,8 +18,22 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.7.0", features = [] }
 
+tokio = { version = "1.39.2", features = ["full"] }
+thiserror = "1.0.63"
+anyhow = "1.0.86"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tokio-util = { version = "0.7.11", features = ["codec"] }
+tokio-serial = "5.4.4"
+wmi = "0.13.3"
+parking_lot = "0.12.3"
+futures = "0.3.0"
+
+[patch.crates-io]
+mio-serial = { git = "https://github.com/JadKHaddad/mio-serial.git", branch = "stop-bits-unwrap-or-one" }
+
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
 # If you use cargo directly instead of tauri's cli you can use this feature flag to switch between tauri's `dev` and `build` modes.
 # DO NOT REMOVE!!
-custom-protocol = [ "tauri/custom-protocol" ]
+custom-protocol = ["tauri/custom-protocol"]
