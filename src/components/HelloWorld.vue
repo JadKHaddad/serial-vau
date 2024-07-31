@@ -19,6 +19,9 @@
       <v-btn @click="refreshSerialPorts">
         Refresh
       </v-btn>
+      <v-btn @click="doError">
+        Error
+      </v-btn>
     </v-responsive>
   </v-container>
 </template>
@@ -59,5 +62,15 @@ const refreshSerialPorts = () => {
       console.error(error);
     });
 };
+
+const doError = () => {
+  invoke('do_error')
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+}
 
 </script>

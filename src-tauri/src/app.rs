@@ -1,18 +1,30 @@
 use anyhow::Context;
+use error::AppError;
 use tauri::{AppHandle, Manager};
 
+pub mod error;
 pub mod state;
 
 #[tauri::command]
-pub fn refresh_serial_ports(app: AppHandle) -> Result<(), String> {
+#[tracing::instrument(skip_all)]
+fn refresh_serial_ports(app: AppHandle) -> Result<(), AppError> {
+    refresh_serial_ports_intern(&app)
+}
+
+fn refresh_serial_ports_intern(app: &AppHandle) -> Result<(), AppError> {
     tracing::info!("Refreshing serial ports");
 
-    let ports = crate::serial::available_port_models().map_err(|err| err.to_string())?;
+    let ports = crate::serial::available_port_models()?;
 
-    app.emit_all("serial_ports_event", &ports)
-        .map_err(|err| err.to_string())?;
+    app.emit_all("serial_ports_event", &ports)?;
 
     Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all)]
+fn do_error() -> Result<(), AppError> {
+    return Err(anyhow::anyhow!("Oops!").into());
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -24,7 +36,7 @@ pub fn run() -> anyhow::Result<()> {
             std::thread::spawn(move || {
                 tracing::debug!("Starting serial creation events watcher");
 
-                let con = crate::wmi::Con::new()?;
+                let con = crate::wmi::WmiCon::new()?;
                 let creation_iter = con.creation_iter()?;
 
                 for serial_port in creation_iter {
@@ -34,9 +46,7 @@ pub fn run() -> anyhow::Result<()> {
 
                     tracing::trace!(name=%serial_port.name(), "Serial creation event detected");
 
-                    if let Ok(ports) = crate::serial::available_port_models() {
-                        let _ = app_handle_creation.emit_all("serial_ports_event", &ports);
-                    }
+                    let _ = refresh_serial_ports_intern(&app_handle_creation);
                 }
 
                 tracing::debug!("Serial creation events watcher terminated");
@@ -47,7 +57,7 @@ pub fn run() -> anyhow::Result<()> {
             std::thread::spawn(move || {
                 tracing::debug!("Starting serial deletion events watcher");
 
-                let con = crate::wmi::Con::new()?;
+                let con = crate::wmi::WmiCon::new()?;
                 let deletion_iter = con.deletion_iter()?;
 
                 for serial_port in deletion_iter {
@@ -57,9 +67,7 @@ pub fn run() -> anyhow::Result<()> {
 
                     tracing::trace!(name=%serial_port.name(), "Serial deletion event detected");
 
-                    if let Ok(ports) = crate::serial::available_port_models() {
-                        let _ = app_handle_deletion.emit_all("serial_ports_event", &ports);
-                    }
+                    let _ = refresh_serial_ports_intern(&app_handle_deletion);
                 }
 
                 tracing::debug!("Serial deletion events watcher terminated");
@@ -69,7 +77,7 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![refresh_serial_ports])
+        .invoke_handler(tauri::generate_handler![refresh_serial_ports, do_error])
         .run(tauri::generate_context!())
         .context("Error while running tauri application")
 }

@@ -1,6 +1,5 @@
 use std::{collections::HashMap, time::Duration};
 
-use anyhow::Context;
 use serde::Deserialize;
 use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
 
@@ -45,22 +44,56 @@ impl From<SerialCreation> for SerialPortModel {
     }
 }
 
-pub struct Con {
+#[derive(Debug, thiserror::Error)]
+pub enum NewWmiConError {
+    #[error("Failed to create library: {0}")]
+    Lib(#[source] WMIError),
+    #[error("Failed to create connection: {0}")]
+    Con(#[source] WMIError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CreateFilterError {
+    #[error("Failed to create filter value: {0}")]
+    FilterValue(
+        #[source]
+        #[from]
+        WMIError,
+    ),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CreateIterError {
+    #[error("Failed to create filter: {0}")]
+    Filter(
+        #[source]
+        #[from]
+        CreateFilterError,
+    ),
+    #[error("Failed to create notifications iter: {0}")]
+    Notification(
+        #[source]
+        #[from]
+        WMIError,
+    ),
+}
+
+pub struct WmiCon {
     wmi_con: WMIConnection,
 }
 
-impl Con {
-    pub fn new() -> anyhow::Result<Con> {
-        let com_con = COMLibrary::new().context("Failed to create COM library")?;
-        let wmi_con = WMIConnection::new(com_con).context("Failed to create WMI connection")?;
+impl WmiCon {
+    pub fn new() -> Result<WmiCon, NewWmiConError> {
+        let com_con = COMLibrary::new().map_err(NewWmiConError::Lib)?;
+        let wmi_con = WMIConnection::new(com_con).map_err(NewWmiConError::Con)?;
         Ok(Self { wmi_con })
     }
 
-    fn filters() -> anyhow::Result<HashMap<String, FilterValue>> {
+    fn filters() -> Result<HashMap<String, FilterValue>, CreateFilterError> {
         let mut filters = HashMap::<String, FilterValue>::new();
         filters.insert(
             "TargetInstance".to_owned(),
-            FilterValue::is_a::<SerialPortEvent>().context("Failed to create filter")?,
+            FilterValue::is_a::<SerialPortEvent>()?,
         );
 
         Ok(filters)
@@ -68,13 +101,12 @@ impl Con {
 
     pub fn creation_iter<'a>(
         &'a self,
-    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a> {
-        let filters = Con::filters()?;
+    ) -> Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a, CreateIterError> {
+        let filters = WmiCon::filters()?;
 
         let creation_iter = self
             .wmi_con
-            .filtered_notification::<SerialCreation>(&filters, Some(Duration::from_millis(300)))
-            .context("Failed to create creation iterator")?
+            .filtered_notification::<SerialCreation>(&filters, Some(Duration::from_millis(300)))?
             .map(|item| item.map(Into::into));
 
         Ok(creation_iter)
@@ -82,13 +114,12 @@ impl Con {
 
     pub fn deletion_iter<'a>(
         &'a self,
-    ) -> anyhow::Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a> {
-        let filters = Con::filters()?;
+    ) -> Result<impl Iterator<Item = Result<SerialPortModel, WMIError>> + 'a, CreateIterError> {
+        let filters = WmiCon::filters()?;
 
         let deletion_iter = self
             .wmi_con
-            .filtered_notification::<SerialDeletion>(&filters, Some(Duration::from_millis(300)))
-            .context("Failed to create deletion iterator")?
+            .filtered_notification::<SerialDeletion>(&filters, Some(Duration::from_millis(300)))?
             .map(|item| item.map(Into::into));
 
         Ok(deletion_iter)
