@@ -1,24 +1,28 @@
 use anyhow::Context;
 use error::AppError;
-use tauri::{AppHandle, Manager};
+use state::AppState;
+use tauri::{AppHandle, Manager, State};
 
 use crate::serial::watcher::Watcher as SerialWatcher;
 
 pub mod error;
+pub mod model;
 pub mod state;
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-fn refresh_serial_ports(app: AppHandle) -> Result<(), AppError> {
-    refresh_serial_ports_intern(&app)
+fn refresh_serial_ports(app: AppHandle, state: State<AppState>) -> Result<(), AppError> {
+    refresh_serial_ports_intern(&app, &state)
 }
 
-fn refresh_serial_ports_intern(app: &AppHandle) -> Result<(), AppError> {
+fn refresh_serial_ports_intern(app: &AppHandle, state: &AppState) -> Result<(), AppError> {
     tracing::info!("Refreshing serial ports");
 
-    let ports = crate::serial::available_port_models()?;
+    let managed_serial_ports = state.managed_serial_ports()?;
 
-    app.emit_all("serial_ports_event", &ports)?;
+    tracing::debug!(?managed_serial_ports);
+
+    app.emit_all("serial_ports_event", &managed_serial_ports)?;
 
     Ok(())
 }
@@ -30,7 +34,12 @@ fn do_error() -> Result<(), AppError> {
 }
 
 pub fn run() -> anyhow::Result<()> {
+    let state = AppState::default();
+    let state_creation = state.clone();
+    let state_deletion = state.clone();
+
     tauri::Builder::default()
+        .manage(state)
         .setup(|app| {
             let app_handle_creation = app.app_handle().clone();
             let app_handle_deletion = app.app_handle().clone();
@@ -49,7 +58,7 @@ pub fn run() -> anyhow::Result<()> {
                         Err(err) => {tracing::warn!(%err, "Serial creation event error");}
                     }
 
-                    let _ = refresh_serial_ports_intern(&app_handle_creation);
+                    let _ = refresh_serial_ports_intern(&app_handle_creation, &state_creation);
                 }
 
                 tracing::debug!("Serial creation events watcher terminated");
@@ -73,7 +82,7 @@ pub fn run() -> anyhow::Result<()> {
                         }
                     }
 
-                    let _ = refresh_serial_ports_intern(&app_handle_deletion);
+                    let _ = refresh_serial_ports_intern(&app_handle_deletion, &state_deletion);
                 }
 
                 tracing::debug!("Serial deletion events watcher terminated");
