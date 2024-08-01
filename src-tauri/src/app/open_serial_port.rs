@@ -1,4 +1,4 @@
-use tokio::sync::mpsc::{error::SendError, Sender};
+use tokio::sync::mpsc::{error::SendError as TokioSendError, Sender};
 use tokio_util::sync::CancellationToken;
 
 use crate::serial::SerialPort;
@@ -39,7 +39,17 @@ impl OpenSerialPort {
         self
     }
 
-    pub async fn send(&self, value: String) -> Result<(), SendError<String>> {
-        self.tx.send(value).await
+    pub async fn send(&self, value: String) -> Result<(), SendError> {
+        Ok(self.tx.send(value).await?)
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SendError {
+    #[error("Failed to send: {0}")]
+    Send(
+        #[source]
+        #[from]
+        TokioSendError<String>,
+    ),
 }

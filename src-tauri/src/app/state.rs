@@ -6,7 +6,7 @@ use crate::serial::AvailablePortsError;
 
 use super::{
     model::managed_serial_port::{ManagedSerialPort, Status},
-    open_serial_port::OpenSerialPort,
+    open_serial_port::{OpenSerialPort, SendError},
 };
 
 #[derive(Debug, Clone, Default)]
@@ -86,6 +86,17 @@ impl AppStateInner {
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
         return Ok(managed_serial_port.map(|port| port.is_closed()));
+    }
+
+    /// Some(Ok()) => Ok
+    /// Some(Err(_)) => Send error
+    /// None => Port not found
+    pub async fn send_to_open_serial_port(
+        &self,
+        name: &str,
+        value: String,
+    ) -> Option<Result<(), SendError>> {
+        Some(self.open_serial_ports.read().get(name)?.send(value).await)
     }
 }
 
