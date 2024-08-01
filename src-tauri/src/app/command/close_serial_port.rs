@@ -1,11 +1,4 @@
-use serde::Deserialize;
-
 use crate::app::state::AppState;
-
-#[derive(Debug, Deserialize)]
-pub struct OpenSerialPortOptions {
-    name: String,
-}
 
 pub async fn close_serial_port_intern(
     name: String,
