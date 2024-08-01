@@ -3,26 +3,22 @@
     <v-responsive class="align-center fill-height mx-auto" max-width="900">
       <v-img class="mb-4" height="150" src="@/assets/logo.png" />
       <v-list class="mb-4">
-        <v-list-item-group>
-          <v-list-item v-for="(port, index) in managedSerialPorts" :key="port.name">
-            <v-list-item-content>
-              <v-list-item-title class="mb-4">{{ port.name }}</v-list-item-title>
-              <v-list-item-subtitle class="mb-4">{{ port.status }}</v-list-item-subtitle>
-              <v-text-field v-model="portValues[index]" label="Enter value"></v-text-field>
-            </v-list-item-content>
-            <v-list-item-action>
-              <v-btn @click="openSerialPort({ name: port.name })" variant="plain">
-                Open
-              </v-btn>
-              <v-btn @click="closeSerialPort(port.name)" class="ml-4" variant="plain">
-                Close
-              </v-btn>
-              <v-btn @click="sendToSerialPort(port.name, portValues[index])" class="ml-4" variant="plain">
-                Send
-              </v-btn>
-            </v-list-item-action>
-          </v-list-item>
-        </v-list-item-group>
+        <v-list-item v-for="(port, index) in managedSerialPorts" :key="port.name">
+          <v-list-item-title class="mb-4">{{ port.name }}</v-list-item-title>
+          <v-list-item-subtitle class="mb-4">{{ port.status }}</v-list-item-subtitle>
+          <v-text-field v-model="portValues[index]" label="Enter value"></v-text-field>
+          <v-list-item-action>
+            <v-btn @click="openSerialPort({ name: port.name })" variant="plain">
+              Open
+            </v-btn>
+            <v-btn @click="closeSerialPort(port.name)" class="ml-4" variant="plain">
+              Close
+            </v-btn>
+            <v-btn @click="sendToSerialPort(port.name, portValues[index])" class="ml-4" variant="plain">
+              Send
+            </v-btn>
+          </v-list-item-action>
+        </v-list-item>
       </v-list>
 
       <v-text-field v-model="broadcastValue" label="Enter value to send to all ports"></v-text-field>
