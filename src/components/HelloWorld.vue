@@ -9,6 +9,16 @@
               <v-list-item-title>{{ port.name }}</v-list-item-title>
               <v-list-item-subtitle>{{ port.status }}</v-list-item-subtitle>
             </v-list-item-content>
+            <v-list-item-action>
+              <v-btn @click="openSerialPort({ name: port.name })">
+                Open
+              </v-btn>
+            </v-list-item-action>
+            <v-list-item-action>
+              <v-btn @click="closeSerialPort(port.name)">
+                Close
+              </v-btn>
+            </v-list-item-action>
           </v-list-item>
         </v-list-item-group>
       </v-list>
@@ -35,6 +45,10 @@ enum Status {
 interface ManagedSerialPort {
   name: string;
   status: Status;
+}
+
+interface OpenSerialPortOptions {
+  name: string
 }
 
 const managedSerialPorts = ref<ManagedSerialPort[]>([]);
@@ -67,6 +81,26 @@ const refreshSerialPorts = () => {
 
 const doError = () => {
   invoke('do_error')
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+}
+
+const openSerialPort = (options: OpenSerialPortOptions) => {
+  invoke('open_serial_port', { options })
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+}
+
+const closeSerialPort = (name: string) => {
+  invoke('close_serial_port', { name })
     .then((response) => {
 
     })

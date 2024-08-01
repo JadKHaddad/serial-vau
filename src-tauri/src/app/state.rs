@@ -1,29 +1,37 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use parking_lot::RwLock;
-use tokio::sync::mpsc::Sender;
-use tokio_util::sync::CancellationToken;
 
-use crate::serial::{AvailablePortsError, SerialPort};
+use crate::serial::AvailablePortsError;
 
-use super::model::managed_serial_port::{ManagedSerialPort, Status};
-
-#[derive(Debug)]
-pub struct OpenSerialPort {
-    serial_port: SerialPort,
-    tx: Sender<String>,
-    cancellation_token: CancellationToken,
-}
+use super::{
+    model::managed_serial_port::{ManagedSerialPort, Status},
+    open_serial_port::OpenSerialPort,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct AppState {
-    open_serial_ports: Arc<RwLock<HashMap<String, OpenSerialPort>>>,
+    inner: Arc<AppStateInner>,
 }
 
-impl AppState {
+impl Deref for AppState {
+    type Target = AppStateInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct AppStateInner {
+    open_serial_ports: RwLock<HashMap<String, OpenSerialPort>>,
+}
+
+impl AppStateInner {
     pub fn managed_serial_ports(&self) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
         let available_serial_ports = crate::serial::available_ports()?;
         let open_serial_ports = self.open_serial_ports.read();
+
         let managed_serial_ports = available_serial_ports
             .into_iter()
             .map(|port| {
@@ -41,6 +49,43 @@ impl AppState {
             .collect::<Vec<_>>();
 
         Ok(managed_serial_ports)
+    }
+
+    pub fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
+        tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
+
+        self.open_serial_ports
+            .write()
+            .insert(open_serial_port.name().to_string(), open_serial_port)
+    }
+
+    pub fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+        tracing::debug!(name=%name, "Removing serial port");
+
+        self.open_serial_ports.write().remove(name)
+    }
+
+    /// Ok(Some(bool)) => Port found
+    /// Ok(None) => Port not found
+    pub fn is_port_open(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
+        let managed_serial_ports = self.managed_serial_ports()?;
+        let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
+
+        return Ok(managed_serial_port.map(|port| port.is_open()));
+    }
+
+    /// Ok(Some(bool)) => Port found
+    /// Ok(None) => Port not found
+    pub fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
+        let managed_serial_ports = self.managed_serial_ports()?;
+        let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
+
+        return Ok(managed_serial_port.map(|port| port.is_closed()));
+    }
+
+    pub fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+        self.remove_open_serial_port(name)
+            .map(OpenSerialPort::cancelled)
     }
 }
 

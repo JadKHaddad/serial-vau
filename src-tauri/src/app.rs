@@ -1,30 +1,47 @@
 use anyhow::Context;
+use command::{
+    close_serial_port::close_serial_port_intern,
+    open_serial_port::{open_serial_port_intern, OpenSerialPortOptions},
+    refresh_serial_ports::refresh_serial_ports_intern,
+};
 use error::AppError;
 use state::AppState;
 use tauri::{AppHandle, Manager, State};
 
 use crate::serial::watcher::Watcher as SerialWatcher;
 
-pub mod error;
-pub mod model;
-pub mod state;
+mod command;
+mod error;
+mod model;
+mod open_serial_port;
+mod state;
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-fn refresh_serial_ports(app: AppHandle, state: State<AppState>) -> Result<(), AppError> {
+pub fn refresh_serial_ports(app: AppHandle, state: State<AppState>) -> Result<(), AppError> {
     refresh_serial_ports_intern(&app, &state)
 }
 
-fn refresh_serial_ports_intern(app: &AppHandle, state: &AppState) -> Result<(), AppError> {
-    tracing::info!("Refreshing serial ports");
+#[tauri::command]
+#[tracing::instrument(skip_all)]
+pub async fn open_serial_port(
+    options: OpenSerialPortOptions,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    open_serial_port_intern(options, &state).await?;
+    refresh_serial_ports_intern(&app, &state)
+}
 
-    let managed_serial_ports = state.managed_serial_ports()?;
-
-    tracing::debug!(?managed_serial_ports);
-
-    app.emit_all("serial_ports_event", &managed_serial_ports)?;
-
-    Ok(())
+#[tauri::command]
+#[tracing::instrument(skip_all)]
+pub async fn close_serial_port(
+    name: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    close_serial_port_intern(name, &state).await?;
+    refresh_serial_ports_intern(&app, &state)
 }
 
 #[tauri::command]
@@ -92,7 +109,7 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![refresh_serial_ports, do_error])
+        .invoke_handler(tauri::generate_handler![refresh_serial_ports, open_serial_port, close_serial_port, do_error])
         .run(tauri::generate_context!())
         .context("Error while running tauri application")
 }
