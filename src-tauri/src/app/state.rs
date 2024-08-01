@@ -24,6 +24,9 @@ impl Deref for AppState {
 
 #[derive(Debug, Default)]
 pub struct AppStateInner {
+    /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
+    /// which is used in [`Watcher`](crate::serial::watcher::Watcher),
+    /// which is used in [`run`](crate::app::run).
     open_serial_ports: RwLock<HashMap<String, OpenSerialPort>>,
 }
 

@@ -74,6 +74,9 @@ fn do_error() -> Result<(), AppError> {
     return Err(anyhow::anyhow!("Oops!").into());
 }
 
+/// Using [`thread`](std::thread) instead of `async tasks` to watch `serial` events,
+/// because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
+/// which is used in [`Watcher`](crate::serial::watcher::Watcher),
 pub fn run() -> anyhow::Result<()> {
     let state = AppState::default();
     let state_creation = state.clone();
@@ -85,6 +88,7 @@ pub fn run() -> anyhow::Result<()> {
             let app_handle_creation = app.app_handle().clone();
             let app_handle_deletion = app.app_handle().clone();
 
+            // See function's docs
             std::thread::spawn(move || {
                 tracing::debug!("Starting serial creation events watcher");
 
@@ -107,6 +111,7 @@ pub fn run() -> anyhow::Result<()> {
                 anyhow::Result::<()>::Ok(())
             });
 
+            // See function's docs
             std::thread::spawn(move || {
                 tracing::debug!("Starting serial deletion events watcher");
 
