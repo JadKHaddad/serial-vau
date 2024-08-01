@@ -65,6 +65,11 @@ impl AppStateInner {
         self.open_serial_ports.write().remove(name)
     }
 
+    pub fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+        self.remove_open_serial_port(name)
+            .map(OpenSerialPort::cancelled)
+    }
+
     /// Ok(Some(bool)) => Port found
     /// Ok(None) => Port not found
     pub fn is_port_open(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
@@ -81,11 +86,6 @@ impl AppStateInner {
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
         return Ok(managed_serial_port.map(|port| port.is_closed()));
-    }
-
-    pub fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
-        self.remove_open_serial_port(name)
-            .map(OpenSerialPort::cancelled)
     }
 }
 

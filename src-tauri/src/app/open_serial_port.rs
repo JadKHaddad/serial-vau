@@ -27,12 +27,13 @@ impl OpenSerialPort {
         &self.serial_port.name()
     }
 
-    pub fn cancel(&self) {
+    fn cancel(&self) {
         tracing::debug!(name=%self.name(), "Cancelling");
 
         self.cancellation_token.cancel()
     }
 
+    // TODO: make private to state. Port should only be cancelled on removal.
     pub fn cancelled(self) -> Self {
         self.cancel();
         self

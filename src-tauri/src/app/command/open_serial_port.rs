@@ -66,6 +66,7 @@ pub async fn open_serial_port_intern(
                         Some(Err(err)) => {
                             tracing::error!(name=%read_name, %err);
 
+                            // Removing the port will drop the sender causing the write loop to break.
                             tracing::debug!(name=%read_name, "Removing serial port due to an error");
                             read_state.remove_open_serial_port(&read_name);
 
@@ -75,6 +76,7 @@ pub async fn open_serial_port_intern(
                     }
                 },
                 _ = read_cancellation_token.cancelled() => {
+                    // At this point we should have been removed and cancelled. Nothing to do here.
                     tracing::debug!(name=%read_name, "Cancelled");
 
                     break;
@@ -87,13 +89,17 @@ pub async fn open_serial_port_intern(
 
     let write_name = options.name.clone();
     async_runtime::spawn(async move {
+        // Dropping the sender will automatically break the loop.
         while let Some(value) = rx.recv().await {
             tracing::trace!(name=%write_name, %value, "Sending");
 
             match port_write.write_all(value.as_bytes()).await {
                 Ok(_) => {}
                 Err(err) => {
+                    // If the write fails we just break out of the loop.
+                    // Read task must have also been terminated due to the same error.
                     tracing::error!(name=%write_name, %err);
+
                     break;
                 }
             }
