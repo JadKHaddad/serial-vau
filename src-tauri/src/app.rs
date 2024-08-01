@@ -3,6 +3,7 @@ use command::{
     close_serial_port::close_serial_port_intern,
     open_serial_port::{open_serial_port_intern, OpenSerialPortOptions},
     refresh_serial_ports::refresh_serial_ports_intern,
+    send_to_all_serial_ports::send_to_all_serial_ports_intern,
     send_to_serial_port::send_to_serial_port_intern,
 };
 use error::AppError;
@@ -31,7 +32,9 @@ pub async fn open_serial_port(
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     open_serial_port_intern(options, &state).await?;
-    refresh_serial_ports_intern(&app, &state)
+    refresh_serial_ports_intern(&app, &state)?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -42,7 +45,9 @@ pub async fn close_serial_port(
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     close_serial_port_intern(name, &state).await?;
-    refresh_serial_ports_intern(&app, &state)
+    refresh_serial_ports_intern(&app, &state)?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -55,6 +60,12 @@ pub fn send_to_serial_port(
     send_to_serial_port_intern(name, value, &state)?;
 
     Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all)]
+pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
+    send_to_all_serial_ports_intern(value, &state);
 }
 
 #[tauri::command]
@@ -122,7 +133,14 @@ pub fn run() -> anyhow::Result<()> {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![refresh_serial_ports, open_serial_port, close_serial_port, send_to_serial_port, do_error])
+        .invoke_handler(tauri::generate_handler![
+            refresh_serial_ports,
+            open_serial_port,
+            close_serial_port,
+            send_to_serial_port,
+            send_to_all_serial_ports,
+            do_error
+        ])
         .run(tauri::generate_context!())
         .context("Error while running tauri application")
 }

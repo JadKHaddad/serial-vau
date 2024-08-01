@@ -98,6 +98,12 @@ impl AppStateInner {
     ) -> Option<Result<(), SendError>> {
         Some(self.open_serial_ports.read().get(name)?.send(value))
     }
+
+    pub fn send_to_all_open_serial_ports(&self, value: String) {
+        self.open_serial_ports.read().values().for_each(|port| {
+            let _ = port.send(value.clone());
+        })
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
