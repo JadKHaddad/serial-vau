@@ -1,4 +1,4 @@
-use tokio::sync::mpsc::{error::SendError as TokioSendError, Sender};
+use tokio::sync::mpsc::{error::SendError as TokioSendError, UnboundedSender};
 use tokio_util::sync::CancellationToken;
 
 use crate::serial::SerialPort;
@@ -6,14 +6,14 @@ use crate::serial::SerialPort;
 #[derive(Debug)]
 pub struct OpenSerialPort {
     serial_port: SerialPort,
-    tx: Sender<String>,
+    tx: UnboundedSender<String>,
     cancellation_token: CancellationToken,
 }
 
 impl OpenSerialPort {
     pub fn new(
         serial_port: SerialPort,
-        tx: Sender<String>,
+        tx: UnboundedSender<String>,
         cancellation_token: CancellationToken,
     ) -> Self {
         Self {
@@ -39,8 +39,8 @@ impl OpenSerialPort {
         self
     }
 
-    pub async fn send(&self, value: String) -> Result<(), SendError> {
-        Ok(self.tx.send(value).await?)
+    pub fn send(&self, value: String) -> Result<(), SendError> {
+        Ok(self.tx.send(value)?)
     }
 }
 

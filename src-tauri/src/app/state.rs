@@ -91,12 +91,12 @@ impl AppStateInner {
     /// Some(Ok()) => Ok
     /// Some(Err(_)) => Send error
     /// None => Port not found
-    pub async fn send_to_open_serial_port(
+    pub fn send_to_open_serial_port(
         &self,
         name: &str,
         value: String,
     ) -> Option<Result<(), SendError>> {
-        Some(self.open_serial_ports.read().get(name)?.send(value).await)
+        Some(self.open_serial_ports.read().get(name)?.send(value))
     }
 }
 

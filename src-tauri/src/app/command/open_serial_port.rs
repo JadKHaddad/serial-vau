@@ -41,7 +41,7 @@ pub async fn open_serial_port_intern(
         .open_native_async()?;
 
     let (port_read, mut port_write) = tokio::io::split(port);
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
     let cancellation_token = CancellationToken::new();
 
     let mut framed_read_lines_port = FramedRead::new(port_read, LinesCodec::new());
