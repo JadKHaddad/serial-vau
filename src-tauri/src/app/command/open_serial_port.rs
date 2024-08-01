@@ -1,6 +1,5 @@
 use futures::StreamExt;
 use serde::Deserialize;
-use tauri::async_runtime;
 use tokio::io::AsyncWriteExt;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
@@ -55,7 +54,7 @@ pub async fn open_serial_port_intern(
     let read_state = state.clone();
     let read_cancellation_token = cancellation_token;
     let read_name = options.name.clone();
-    async_runtime::spawn(async move {
+    tokio::spawn(async move {
         loop {
             tokio::select! {
                 line = framed_read_lines_port.next() => {
@@ -88,7 +87,7 @@ pub async fn open_serial_port_intern(
     });
 
     let write_name = options.name.clone();
-    async_runtime::spawn(async move {
+    tokio::spawn(async move {
         // Dropping the sender will automatically break the loop.
         while let Some(value) = rx.recv().await {
             tracing::trace!(name=%write_name, %value, "Sending");
