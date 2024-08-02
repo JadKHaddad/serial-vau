@@ -79,7 +79,7 @@ impl AppStateInner {
         let managed_serial_ports = self.managed_serial_ports()?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
-        return Ok(managed_serial_port.map(|port| port.is_open()));
+        Ok(managed_serial_port.map(|port| port.is_open()))
     }
 
     /// Ok(Some(bool)) => Port found
@@ -88,7 +88,7 @@ impl AppStateInner {
         let managed_serial_ports = self.managed_serial_ports()?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
-        return Ok(managed_serial_port.map(|port| port.is_closed()));
+        Ok(managed_serial_port.map(|port| port.is_closed()))
     }
 
     /// Some(Ok()) => Ok
