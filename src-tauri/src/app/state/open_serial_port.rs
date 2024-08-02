@@ -1,19 +1,19 @@
 use tokio::sync::mpsc::{error::SendError as TokioSendError, UnboundedSender};
-use tokio_util::sync::CancellationToken;
+use tokio_util::{bytes::Bytes, sync::CancellationToken};
 
 use crate::serial::SerialPort;
 
 #[derive(Debug)]
 pub struct OpenSerialPort {
     serial_port: SerialPort,
-    tx: UnboundedSender<Vec<u8>>,
+    tx: UnboundedSender<Bytes>,
     cancellation_token: CancellationToken,
 }
 
 impl OpenSerialPort {
     pub fn new(
         serial_port: SerialPort,
-        tx: UnboundedSender<Vec<u8>>,
+        tx: UnboundedSender<Bytes>,
         cancellation_token: CancellationToken,
     ) -> Self {
         Self {
@@ -38,7 +38,7 @@ impl OpenSerialPort {
         self
     }
 
-    pub(super) fn send(&self, value: Vec<u8>) -> Result<(), SendError> {
+    pub(super) fn send(&self, value: Bytes) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
     }
 }
@@ -49,6 +49,6 @@ pub enum SendError {
     Send(
         #[source]
         #[from]
-        TokioSendError<Vec<u8>>,
+        TokioSendError<Bytes>,
     ),
 }

@@ -1,8 +1,10 @@
+use tokio_util::bytes::Bytes;
+
 use crate::app::state::{open_serial_port::SendError, AppState};
 
 pub fn send_to_serial_port_intern(
     name: String,
-    value: Vec<u8>,
+    value: Bytes,
     state: &AppState,
 ) -> Result<(), SendToSerialPortError> {
     tracing::info!(name=%name, "Sending to serial port");

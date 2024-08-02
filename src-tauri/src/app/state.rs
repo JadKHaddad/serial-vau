@@ -2,6 +2,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use open_serial_port::{OpenSerialPort, SendError};
 use parking_lot::RwLock;
+use tokio_util::bytes::Bytes;
 
 use crate::serial::AvailablePortsError;
 
@@ -97,13 +98,14 @@ impl AppStateInner {
     pub fn send_to_open_serial_port(
         &self,
         name: &str,
-        value: Vec<u8>,
+        value: Bytes,
     ) -> Option<Result<(), SendError>> {
         Some(self.open_serial_ports.read().get(name)?.send(value))
     }
 
-    pub fn send_to_all_open_serial_ports(&self, value: Vec<u8>) {
+    pub fn send_to_all_open_serial_ports(&self, value: Bytes) {
         self.open_serial_ports.read().values().for_each(|port| {
+            // Cheap clone
             let _ = port.send(value.clone());
         })
     }

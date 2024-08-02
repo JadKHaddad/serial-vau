@@ -56,7 +56,7 @@ pub fn send_to_serial_port(
     value: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let value = value.into_bytes();
+    let value = value.into();
 
     send_to_serial_port_intern(name, value, &state)?;
 
@@ -66,7 +66,7 @@ pub fn send_to_serial_port(
 #[tauri::command]
 #[tracing::instrument(skip_all)]
 pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
-    let value = value.into_bytes();
+    let value = value.into();
 
     send_to_all_serial_ports_intern(value, &state);
 }

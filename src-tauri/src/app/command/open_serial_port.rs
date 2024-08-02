@@ -1,9 +1,9 @@
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
-use tokio::io::AsyncWriteExt;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
-    codec::{FramedRead, LinesCodec},
+    bytes::Bytes,
+    codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec},
     sync::CancellationToken,
 };
 
@@ -36,11 +36,12 @@ pub async fn open_serial_port_intern(
         .parity(Parity::None)
         .open_native_async()?;
 
-    let (port_read, mut port_write) = tokio::io::split(port);
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
+    let (port_read, port_write) = tokio::io::split(port);
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Bytes>();
     let cancellation_token = CancellationToken::new();
 
     let mut framed_read_lines_port = FramedRead::new(port_read, LinesCodec::new());
+    let mut framed_write_bytes_port = FramedWrite::new(port_write, BytesCodec::new());
 
     state.add_open_serial_port(OpenSerialPort::new(
         SerialPort::new(options.name.clone()),
@@ -89,7 +90,7 @@ pub async fn open_serial_port_intern(
         while let Some(value) = rx.recv().await {
             tracing::trace!(name=%write_name, value_str=%String::from_utf8_lossy(&value), value=?value, "Sending");
 
-            match port_write.write_all(&value).await {
+            match framed_write_bytes_port.send(value).await {
                 Ok(_) => {}
                 Err(err) => {
                     // If the write fails we just break out of the loop.
