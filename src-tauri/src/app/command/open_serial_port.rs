@@ -62,7 +62,7 @@ pub async fn open_serial_port_intern(
                 bytes = framed_read_bytes_port.next() => {
                     match bytes {
                         Some(Ok(bytes)) => {
-                            tracing::trace!(name=%read_name, ?bytes, "Received");
+                            tracing::trace!(target: "serial_vau::serial::read::byte", name=%read_name, ?bytes, "Read");
 
                             lines_bytes.extend_from_slice(&bytes);
 
@@ -70,10 +70,10 @@ pub async fn open_serial_port_intern(
                                 match lines_codec.decode(&mut lines_bytes) {
                                     Ok(None) => break,
                                     Ok(Some(line)) => {
-                                        tracing::trace!(name=%read_name, %line, "Received");
+                                        tracing::trace!(target: "serial_vau::serial::read::line", name=%read_name, %line, "Read");
                                     }
                                     Err(err) => {
-                                        tracing::warn!(name=%read_name, %err, "Failed to decode line");
+                                        tracing::warn!(target: "serial_vau::serial::read::line", name=%read_name, %err, "Failed to decode line");
 
                                         // Clear the buffer to prevent further errors.
                                         lines_bytes.clear();
@@ -87,7 +87,7 @@ pub async fn open_serial_port_intern(
                             tracing::error!(name=%read_name, %err);
 
                             // Removing the port will drop the sender causing the write loop to break.
-                            tracing::debug!(name=%read_name, "Removing serial port due to an error");
+                            tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Removing serial port due to an error");
                             read_state.remove_open_serial_port(&read_name);
 
                             break;
@@ -97,35 +97,36 @@ pub async fn open_serial_port_intern(
                 },
                 _ = read_cancellation_token.cancelled() => {
                     // At this point we should have been removed and cancelled. Nothing to do here.
-                    tracing::debug!(name=%read_name, "Cancelled");
+                    tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Cancelled");
 
                     break;
                 }
             }
         }
 
-        tracing::debug!(name=%read_name, "Read task terminated")
+        tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Read task terminated")
     });
 
     let write_name = options.name.clone();
     tokio::spawn(async move {
         // Dropping the sender will automatically break the loop.
         while let Some(value) = rx.recv().await {
-            tracing::trace!(name=%write_name, value_str=%String::from_utf8_lossy(&value), value=?value, "Sending");
+            tracing::trace!(target: "serial_vau::serial::write::byte", name=%write_name, value=?value, "Sending");
+            tracing::trace!(target: "serial_vau::serial::write::string", name=%write_name, value=%String::from_utf8_lossy(&value), "Sending");
 
             match framed_write_bytes_port.send(value).await {
                 Ok(_) => {}
                 Err(err) => {
                     // If the write fails we just break out of the loop.
                     // Read task must have also been terminated due to the same error.
-                    tracing::error!(name=%write_name, %err);
+                    tracing::error!(target: "serial_vau::serial::write", name=%write_name, %err);
 
                     break;
                 }
             }
         }
 
-        tracing::debug!(name=%write_name, "Write task terminated")
+        tracing::debug!(target: "serial_vau::serial::write", name=%write_name, "Write task terminated")
     });
 
     Ok(())
