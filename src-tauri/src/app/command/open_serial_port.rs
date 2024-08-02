@@ -2,8 +2,8 @@ use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
-    bytes::Bytes,
-    codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec},
+    bytes::{Bytes, BytesMut},
+    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec},
     sync::CancellationToken,
 };
 
@@ -40,7 +40,7 @@ pub async fn open_serial_port_intern(
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Bytes>();
     let cancellation_token = CancellationToken::new();
 
-    let mut framed_read_lines_port = FramedRead::new(port_read, LinesCodec::new());
+    let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
     let mut framed_write_bytes_port = FramedWrite::new(port_write, BytesCodec::new());
 
     state.add_open_serial_port(OpenSerialPort::new(
@@ -52,13 +52,36 @@ pub async fn open_serial_port_intern(
     let read_state = state.clone();
     let read_cancellation_token = cancellation_token;
     let read_name = options.name.clone();
+
     tokio::spawn(async move {
+        let mut lines_codec = LinesCodec::new();
+        let mut lines_bytes = BytesMut::new();
+
         loop {
             tokio::select! {
-                line = framed_read_lines_port.next() => {
-                    match line {
-                        Some(Ok(line)) => {
-                            tracing::trace!(name=%read_name, %line, "Received");
+                bytes = framed_read_bytes_port.next() => {
+                    match bytes {
+                        Some(Ok(bytes)) => {
+                            tracing::trace!(name=%read_name, ?bytes, "Received");
+
+                            lines_bytes.extend_from_slice(&bytes);
+
+                            loop {
+                                match lines_codec.decode(&mut lines_bytes) {
+                                    Ok(None) => break,
+                                    Ok(Some(line)) => {
+                                        tracing::trace!(name=%read_name, %line, "Received");
+                                    }
+                                    Err(err) => {
+                                        tracing::warn!(name=%read_name, %err, "Failed to decode line");
+
+                                        // Clear the buffer to prevent further errors.
+                                        lines_bytes.clear();
+
+                                        break;
+                                    }
+                                }
+                            }
                         }
                         Some(Err(err)) => {
                             tracing::error!(name=%read_name, %err);
