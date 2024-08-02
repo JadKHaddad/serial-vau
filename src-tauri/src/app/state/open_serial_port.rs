@@ -6,14 +6,14 @@ use crate::serial::SerialPort;
 #[derive(Debug)]
 pub struct OpenSerialPort {
     serial_port: SerialPort,
-    tx: UnboundedSender<String>,
+    tx: UnboundedSender<Vec<u8>>,
     cancellation_token: CancellationToken,
 }
 
 impl OpenSerialPort {
     pub fn new(
         serial_port: SerialPort,
-        tx: UnboundedSender<String>,
+        tx: UnboundedSender<Vec<u8>>,
         cancellation_token: CancellationToken,
     ) -> Self {
         Self {
@@ -38,7 +38,7 @@ impl OpenSerialPort {
         self
     }
 
-    pub(super) fn send(&self, value: String) -> Result<(), SendError> {
+    pub(super) fn send(&self, value: Vec<u8>) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
     }
 }
@@ -49,6 +49,6 @@ pub enum SendError {
     Send(
         #[source]
         #[from]
-        TokioSendError<String>,
+        TokioSendError<Vec<u8>>,
     ),
 }

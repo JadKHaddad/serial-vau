@@ -97,12 +97,12 @@ impl AppStateInner {
     pub fn send_to_open_serial_port(
         &self,
         name: &str,
-        value: String,
+        value: Vec<u8>,
     ) -> Option<Result<(), SendError>> {
         Some(self.open_serial_ports.read().get(name)?.send(value))
     }
 
-    pub fn send_to_all_open_serial_ports(&self, value: String) {
+    pub fn send_to_all_open_serial_ports(&self, value: Vec<u8>) {
         self.open_serial_ports.read().values().for_each(|port| {
             let _ = port.send(value.clone());
         })

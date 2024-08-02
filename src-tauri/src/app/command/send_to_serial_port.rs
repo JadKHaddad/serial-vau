@@ -2,7 +2,7 @@ use crate::app::state::{open_serial_port::SendError, AppState};
 
 pub fn send_to_serial_port_intern(
     name: String,
-    value: String,
+    value: Vec<u8>,
     state: &AppState,
 ) -> Result<(), SendToSerialPortError> {
     tracing::info!(name=%name, "Sending to serial port");

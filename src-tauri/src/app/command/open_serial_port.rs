@@ -37,7 +37,7 @@ pub async fn open_serial_port_intern(
         .open_native_async()?;
 
     let (port_read, mut port_write) = tokio::io::split(port);
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
     let cancellation_token = CancellationToken::new();
 
     let mut framed_read_lines_port = FramedRead::new(port_read, LinesCodec::new());
@@ -87,9 +87,9 @@ pub async fn open_serial_port_intern(
     tokio::spawn(async move {
         // Dropping the sender will automatically break the loop.
         while let Some(value) = rx.recv().await {
-            tracing::trace!(name=%write_name, %value, "Sending");
+            tracing::trace!(name=%write_name, value_str=%String::from_utf8_lossy(&value), value=?value, "Sending");
 
-            match port_write.write_all(value.as_bytes()).await {
+            match port_write.write_all(&value).await {
                 Ok(_) => {}
                 Err(err) => {
                     // If the write fails we just break out of the loop.
