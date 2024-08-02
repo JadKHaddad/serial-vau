@@ -99,9 +99,9 @@ impl Watcher {
         Ok(filters)
     }
 
-    pub fn creation_iter<'a>(
-        &'a self,
-    ) -> Result<impl Iterator<Item = Result<SerialPort, WMIError>> + 'a, CreateIterError> {
+    pub fn creation_iter(
+        &self,
+    ) -> Result<impl Iterator<Item = Result<SerialPort, WMIError>> + '_, CreateIterError> {
         let filters = Watcher::filters()?;
 
         let creation_iter = self
@@ -112,9 +112,9 @@ impl Watcher {
         Ok(creation_iter)
     }
 
-    pub fn deletion_iter<'a>(
-        &'a self,
-    ) -> Result<impl Iterator<Item = Result<SerialPort, WMIError>> + 'a, CreateIterError> {
+    pub fn deletion_iter(
+        &self,
+    ) -> Result<impl Iterator<Item = Result<SerialPort, WMIError>> + '_, CreateIterError> {
         let filters = Watcher::filters()?;
 
         let deletion_iter = self
