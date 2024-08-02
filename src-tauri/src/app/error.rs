@@ -17,8 +17,8 @@ impl<E: Into<anyhow::Error>> From<E> for AppError {
     }
 }
 
-impl Into<InvokeError> for AppError {
-    fn into(self) -> InvokeError {
-        InvokeError::from_anyhow(self.err)
+impl From<AppError> for InvokeError {
+    fn from(val: AppError) -> Self {
+        Self::from_anyhow(val.err)
     }
 }
