@@ -8,10 +8,7 @@ use tokio_util::{
 };
 
 use crate::{
-    app::{
-        open_serial_port::OpenSerialPort,
-        state::{AppState, ManagedSerialPortsError},
-    },
+    app::state::{open_serial_port::OpenSerialPort, AppState, ManagedSerialPortsError},
     serial::SerialPort,
 };
 

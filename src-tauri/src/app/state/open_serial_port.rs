@@ -24,7 +24,7 @@ impl OpenSerialPort {
     }
 
     pub fn name(&self) -> &str {
-        &self.serial_port.name()
+        self.serial_port.name()
     }
 
     fn cancel(&self) {
@@ -33,13 +33,12 @@ impl OpenSerialPort {
         self.cancellation_token.cancel()
     }
 
-    // TODO: make private to state. Port should only be cancelled on removal.
-    pub fn cancelled(self) -> Self {
+    pub(super) fn cancelled(self) -> Self {
         self.cancel();
         self
     }
 
-    pub fn send(&self, value: String) -> Result<(), SendError> {
+    pub(super) fn send(&self, value: String) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
     }
 }

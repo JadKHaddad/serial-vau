@@ -15,7 +15,6 @@ use crate::serial::watcher::Watcher as SerialWatcher;
 mod command;
 mod error;
 mod model;
-mod open_serial_port;
 mod state;
 
 #[tauri::command]

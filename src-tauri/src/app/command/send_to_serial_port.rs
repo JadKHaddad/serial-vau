@@ -1,4 +1,4 @@
-use crate::app::{open_serial_port::SendError, state::AppState};
+use crate::app::state::{open_serial_port::SendError, AppState};
 
 pub fn send_to_serial_port_intern(
     name: String,

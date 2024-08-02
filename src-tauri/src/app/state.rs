@@ -1,13 +1,13 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
+use open_serial_port::{OpenSerialPort, SendError};
 use parking_lot::RwLock;
 
 use crate::serial::AvailablePortsError;
 
-use super::{
-    model::managed_serial_port::{ManagedSerialPort, Status},
-    open_serial_port::{OpenSerialPort, SendError},
-};
+use super::model::managed_serial_port::{ManagedSerialPort, Status};
+
+pub mod open_serial_port;
 
 #[derive(Debug, Clone, Default)]
 pub struct AppState {
