@@ -7,6 +7,7 @@ use tokio_util::{bytes::Bytes, sync::CancellationToken};
 
 use crate::serial::SerialPort;
 
+/// Defines if an open serial port is currently reading or stopped.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ReadState {
     Read,
@@ -47,8 +48,14 @@ impl TxHandle {
 #[derive(Debug)]
 pub struct OpenSerialPort {
     serial_port: SerialPort,
+    /// Main channel to send data to the serial port.
+    ///
+    /// The write task is waiting for data to be sent to the serial port.
     tx: MPSCUnboundedSender<Bytes>,
     cancellation_token: CancellationToken,
+    /// Defines if the read task is currently reading or stopped.
+    ///
+    /// The read task is always watching for changes to the read state.
     read_state_tx: WatchSender<ReadState>,
 }
 
@@ -93,7 +100,7 @@ impl OpenSerialPort {
         }
     }
 
-    /// Fails silently if the send fails. Open serial Port is probably closed.
+    /// Fails silently if the send fails. Open serial port is probably closed.
     pub(super) fn set_read_state(&self, read_state: ReadState) {
         let _ = self.read_state_tx.send(read_state);
     }
