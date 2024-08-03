@@ -10,6 +10,22 @@ pub struct OpenSerialPort {
     cancellation_token: CancellationToken,
 }
 
+#[derive(Debug)]
+pub struct TxHandle {
+    serial_port: SerialPort,
+    tx: UnboundedSender<Bytes>,
+}
+
+impl TxHandle {
+    pub fn send(&self, value: Bytes) -> Result<(), SendError> {
+        Ok(self.tx.send(value)?)
+    }
+
+    pub fn name(&self) -> &str {
+        self.serial_port.name()
+    }
+}
+
 impl OpenSerialPort {
     pub fn new(
         serial_port: SerialPort,
@@ -40,6 +56,13 @@ impl OpenSerialPort {
 
     pub(super) fn send(&self, value: Bytes) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
+    }
+
+    pub(super) fn tx_handle(&self) -> TxHandle {
+        TxHandle {
+            serial_port: self.serial_port.clone(),
+            tx: self.tx.clone(),
+        }
     }
 }
 

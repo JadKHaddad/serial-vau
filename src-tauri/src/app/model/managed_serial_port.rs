@@ -10,6 +10,8 @@ pub enum Status {
 pub struct ManagedSerialPort {
     pub name: String,
     pub status: Status,
+    pub subscriptions: Vec<String>,
+    pub subscribed_to: Vec<String>,
 }
 
 impl ManagedSerialPort {

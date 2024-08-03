@@ -5,6 +5,7 @@ use command::{
     refresh_serial_ports::refresh_serial_ports_intern,
     send_to_all_serial_ports::send_to_all_serial_ports_intern,
     send_to_serial_port::send_to_serial_port_intern,
+    subscribe::{subscribe_intern, unsubscribe_intern},
 };
 use error::AppError;
 use state::AppState;
@@ -69,6 +70,34 @@ pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
     let value = value.into();
 
     send_to_all_serial_ports_intern(value, &state);
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all)]
+pub fn subscribe(
+    from: &str,
+    to: &str,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    subscribe_intern(from, to, &state);
+    refresh_serial_ports_intern(&app, &state)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all)]
+pub fn unsubscribe(
+    from: &str,
+    to: &str,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    unsubscribe_intern(from, to, &state);
+    refresh_serial_ports_intern(&app, &state)?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -147,6 +176,8 @@ pub fn run() -> anyhow::Result<()> {
             close_serial_port,
             send_to_serial_port,
             send_to_all_serial_ports,
+            subscribe,
+            unsubscribe,
             do_error
         ])
         .run(tauri::generate_context!())

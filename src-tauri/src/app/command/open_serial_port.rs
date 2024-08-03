@@ -49,6 +49,7 @@ pub async fn open_serial_port_intern(
         cancellation_token.clone(),
     ));
 
+    let subscriptions = state.subscriptions();
     let read_state = state.clone();
     let read_cancellation_token = cancellation_token;
     let read_name = options.name.clone();
@@ -63,6 +64,16 @@ pub async fn open_serial_port_intern(
                     match bytes {
                         Some(Ok(bytes)) => {
                             tracing::trace!(target: "serial_vau::serial::read::byte", name=%read_name, ?bytes, "Read");
+
+                            if let Some( subscriptions) = subscriptions.read().get(&read_name){
+                                for (subscriber_name, tx_handle) in subscriptions {
+                                    if let Some(tx_handle) = tx_handle {
+                                        if let Err(err) = tx_handle.send(bytes.clone().into()) {
+                                            tracing::error!(target: "serial_vau::serial::read", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
+                                        }
+                                    }
+                                }
+                            }
 
                             lines_bytes.extend_from_slice(&bytes);
 

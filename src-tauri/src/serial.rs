@@ -3,7 +3,7 @@ use tokio_serial::{Error as TokioSerialError, SerialPortInfo};
 
 pub mod watcher;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct SerialPort {
     name: String,
 }
