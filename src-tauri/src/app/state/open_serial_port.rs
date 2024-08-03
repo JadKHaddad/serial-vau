@@ -10,22 +10,10 @@ pub struct OpenSerialPort {
     cancellation_token: CancellationToken,
 }
 
-impl Drop for OpenSerialPort {
-    fn drop(&mut self) {
-        tracing::debug!(name=%self.name(), "Dropping open serial port");
-    }
-}
-
 #[derive(Debug)]
 pub struct TxHandle {
     serial_port: SerialPort,
     tx: UnboundedSender<Bytes>,
-}
-
-impl Drop for TxHandle {
-    fn drop(&mut self) {
-        tracing::debug!(name=%self.name(), "Dropping handle");
-    }
 }
 
 impl TxHandle {
