@@ -60,6 +60,7 @@ pub async fn open_serial_port_intern(
 
         loop {
             tokio::select! {
+                // TODO: add the option to read or not read.
                 bytes = framed_read_bytes_port.next() => {
                     match bytes {
                         Some(Ok(bytes)) => {
@@ -133,7 +134,7 @@ pub async fn open_serial_port_intern(
                 send_result = framed_write_bytes_port.send(value) => {
                     match send_result {
                         Ok(_) => {
-                            tracing::trace!(target: "serial_vau::serial::write::result", "Ok");
+                            tracing::trace!(target: "serial_vau::serial::write::result",name=%write_name, "Ok");
                         }
                         Err(err) => {
                             // If the write fails we just break out of the loop.

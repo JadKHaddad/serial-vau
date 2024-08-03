@@ -4,55 +4,67 @@
       <v-img class="mb-4" height="150" src="@/assets/logo.png" />
       <v-list class="mb-4">
         <v-list-item v-for="(port, index) in managedSerialPorts" :key="port.name">
-          <v-list-item-title class="mb-4">{{ port.name }}</v-list-item-title>
-          <v-list-item-subtitle class="mb-4">{{ port.status }}</v-list-item-subtitle>
+          <v-row class="mb-4" align="center">
+            <v-col cols="auto">
+              <v-list-item-title>{{ port.name }}</v-list-item-title>
+            </v-col>
+            <v-icon :color="port.status === Status.Open ? 'green' : 'red'" :size="16">
+              {{ port.status === Status.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
+            </v-icon>
+          </v-row>
 
           <v-list-item-subtitle class="mb-4">Subscriptions:</v-list-item-subtitle>
           <v-chip-group column>
-            <v-chip class="mb-4" v-for="(subscription, subIndex) in port.subscriptions" :key="subIndex">
+            <v-chip class="mb-4" v-for="(subscription, subIndex) in port.subscriptions" :key="subIndex" closable
+              v-on:click:close="unsubscribe(port.name, subscription)">
               {{ subscription }}
             </v-chip>
           </v-chip-group>
 
           <v-list-item-subtitle class="mb-4">Subscribed To:</v-list-item-subtitle>
           <v-chip-group column>
-            <v-chip class="mb-4" v-for="(subscribed, subToIndex) in port.subscribed_to" :key="subToIndex">
+            <v-chip class="mb-4" v-for="(subscribed, subToIndex) in port.subscribed_to" :key="subToIndex"
+              v-on:click:close="unsubscribe(subscribed, port.name)" closable>
               {{ subscribed }}
             </v-chip>
           </v-chip-group>
 
-          <v-text-field v-model="portValues[index]" label="Send value"></v-text-field>
+          <v-list-item-action class="mb-4">
+            <v-menu>
+              <template v-slot:activator="{ props }">
+                <v-btn v-bind="props" variant="plain">
+                  Subscribe
+                </v-btn>
+              </template>
+              <v-list>
+                <v-list-item v-for="( managedPort, _) in managedSerialPorts" :key="managedPort.name"
+                  @click="subscribe(managedPort.name, port.name)">
+                  <v-list-item-title>{{ managedPort.name }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
 
-          <v-list-item-action>
             <v-btn @click="openSerialPort({ name: port.name })" variant="plain">
               Open
             </v-btn>
-            <v-btn @click="closeSerialPort(port.name)" class="ml-4" variant="plain">
+            <v-btn @click="closeSerialPort(port.name)" variant="plain">
               Close
-            </v-btn>
-            <v-btn @click="sendToSerialPort(port.name, portValues[index])" class="ml-4" variant="plain">
-              Send
             </v-btn>
           </v-list-item-action>
 
-          <v-text-field v-model="subscriptionInputs[index].subscribeTo" label="Subscribe to"></v-text-field>
-          <v-btn @click="subscribe(subscriptionInputs[index].subscribeTo, port.name)" class="mb-4">
-            Subscribe
-          </v-btn>
-
-          <v-text-field v-model="subscriptionInputs[index].unsubscribeFrom" label="Unsubscribe from"></v-text-field>
-          <v-btn @click="unsubscribe(subscriptionInputs[index].unsubscribeFrom, port.name)" class="mb-4">
-            Unsubscribe
-          </v-btn>
+          <v-text-field v-if="port.status === Status.Open" v-model="portValues[index]" label="Send value"
+            :append-icon="portValues[index] ? 'mdi-send' : ''"
+            @click:append="sendToSerialPortAncClearValue(port.name, portValues[index])" clearable
+            @click:clear="clearSerialPortValue(port.name)"></v-text-field>
 
           <v-divider class="mb-4 mt-4"></v-divider>
         </v-list-item>
       </v-list>
 
-      <v-text-field v-model="broadcastValue" label="Enter value to send to all ports"></v-text-field>
-      <v-btn @click="sendToAllSerialPorts(broadcastValue)">
-        Broadcast
-      </v-btn>
+      <v-text-field v-model="broadcastValue" label="Enter value to send to all ports"
+        :append-icon="broadcastValue ? 'mdi-send' : ''"
+        @click:append="sendToAllSerialPortsAndClearBroadcastValue(broadcastValue)" clearable
+        @click:clear="clearBroadcastValue"></v-text-field>
 
       <v-btn @click="refreshSerialPorts" class="ml-4">
         Refresh
@@ -85,25 +97,15 @@ interface OpenSerialPortOptions {
   name: string;
 }
 
-interface SubscriptionInputs {
-  subscribeTo: string;
-  unsubscribeFrom: string;
-}
-
 const managedSerialPorts = ref<ManagedSerialPort[]>([]);
 const portValues = ref<string[]>([]);
 const broadcastValue = ref<string>('');
-const subscriptionInputs = ref<SubscriptionInputs[]>([]);
 
 let unlistenSerialPortsEvent: UnlistenFn;
 
 onMounted(async () => {
   unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
     managedSerialPorts.value = event.payload as ManagedSerialPort[];
-    portValues.value = managedSerialPorts.value.map(() => ''); subscriptionInputs.value = managedSerialPorts.value.map(() => ({
-      subscribeTo: '',
-      unsubscribeFrom: ''
-    }));
   });
 
   refreshSerialPorts();
@@ -114,6 +116,14 @@ onUnmounted(() => {
     unlistenSerialPortsEvent();
   }
 });
+
+const clearBroadcastValue = () => {
+  broadcastValue.value = '';
+};
+
+const clearSerialPortValue = (name: string) => {
+  portValues.value = portValues.value.map((_, index) => index === managedSerialPorts.value.findIndex((port) => port.name === name) ? '' : portValues.value[index]);
+}
 
 const refreshSerialPorts = () => {
   invoke('refresh_serial_ports')
@@ -165,6 +175,11 @@ const sendToSerialPort = (name: string, value: string) => {
     });
 };
 
+const sendToSerialPortAncClearValue = (name: string, value: string) => {
+  sendToSerialPort(name, value);
+  clearSerialPortValue(name);
+};
+
 const sendToAllSerialPorts = (value: string) => {
   invoke('send_to_all_serial_ports', { value })
     .then((response) => {
@@ -173,6 +188,11 @@ const sendToAllSerialPorts = (value: string) => {
     .catch((error) => {
       console.error(error);
     });
+};
+
+const sendToAllSerialPortsAndClearBroadcastValue = (value: string) => {
+  sendToAllSerialPorts(value);
+  clearBroadcastValue();
 };
 
 const subscribe = (from: string, to: string) => {
@@ -194,4 +214,6 @@ const unsubscribe = (from: string, to: string) => {
       console.error(error);
     });
 };
+
+
 </script>
