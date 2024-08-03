@@ -25,16 +25,34 @@ impl Deref for AppState {
 
 #[derive(Debug, Default)]
 pub struct AppStateInner {
+    /// - `Key`: Serial port name.
+    /// - `Value`: Open serial port [`OpenSerialPort`].
+    ///
     /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
     /// which is used in [`Watcher`](crate::serial::watcher::Watcher),
     /// which is used in [`run`](crate::app::run).
     open_serial_ports: RwLock<HashMap<String, OpenSerialPort>>,
+    /// - `Key`: Master Serial port name.
+    /// - `Value`:  
+    ///     - `Key`: Subscriber serial port name.
+    ///     - `Value`: Optional subscriber's [`TxHandle`] to send data to the subscriber.
+    ///        - `Some(TxHandle)`: Subscriber is open.
+    ///        - `None`: Subscriber is closed.
+    ///
+    /// Closing the Subscriber serial port will set its value to `None`. The subscription will not be removed.
+    ///
+    /// ## Notes
+    ///
+    /// - Subscriptions can exist before the master or subscriber is open.
+    /// - Subscriptions can be self-referential.
+    /// - Subscriptions can exist even if the `name` of a serial port does not exist (yet).
+    /// - Subscriptions are not removed when the master or subscriber is closed or removed from system.
+    /// - Subscriptions are removed manually.
     subscriptions: Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>>,
 }
 
 impl AppStateInner {
     pub fn managed_serial_ports(&self) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
-        // TODO: if a subscriber got removed, we will get send errors in open_serial_port
         let available_serial_ports = crate::serial::available_ports()?;
         let open_serial_ports = self.open_serial_ports.read();
         let subscriptions = self.subscriptions.read();
@@ -73,6 +91,7 @@ impl AppStateInner {
         Ok(managed_serial_ports)
     }
 
+    /// Adds the serial port to [`Self::open_serial_ports`] and adds it to all subscriptions.
     pub fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
 
@@ -83,6 +102,9 @@ impl AppStateInner {
             .insert(open_serial_port.name().to_string(), open_serial_port)
     }
 
+    /// Sets the [`Option<TxHandle>`] of the given serial port to `Some(TxHandle)` in all subscriptions.
+    ///
+    /// A subscription can exist before the subscriber is open.
     fn add_open_serial_port_to_pending_subscriptions(&self, open_serial_port: &OpenSerialPort) {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port to pending subscriptions");
 
@@ -95,6 +117,11 @@ impl AppStateInner {
         }
     }
 
+    /// Cancels the subscription of the given serial port in all subscriptions.
+    ///
+    /// Sets the [`Option<TxHandle>`] of the given serial port to `None` in all subscriptions.
+    ///
+    /// The subscription will not be removed.
     fn remove_remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
         tracing::debug!(name=%name, "Removing serial port as subscriber from all subscriptions");
 
@@ -105,6 +132,7 @@ impl AppStateInner {
         }
     }
 
+    /// Removes the serial port from [`Self::open_serial_ports`] and cancels its subscription.
     pub fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
         tracing::debug!(name=%name, "Removing serial port");
 
@@ -112,13 +140,14 @@ impl AppStateInner {
         self.open_serial_ports.write().remove(name)
     }
 
+    /// Removes and cancels the serial port from [`Self::open_serial_ports`] and cancels its subscription.
     pub fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
         self.remove_open_serial_port(name)
             .map(OpenSerialPort::cancelled)
     }
 
-    /// Ok(Some(bool)) => Port found
-    /// Ok(None) => Port not found
+    /// - `Ok(Some(bool))` => Port found
+    /// - `Ok(None)` => Port not found
     pub fn is_port_open(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
         let managed_serial_ports = self.managed_serial_ports()?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
@@ -126,8 +155,8 @@ impl AppStateInner {
         Ok(managed_serial_port.map(|port| port.is_open()))
     }
 
-    /// Ok(Some(bool)) => Port found
-    /// Ok(None) => Port not found
+    /// - `Ok(Some(bool))` => Port found
+    /// - `Ok(None)` => Port not found
     pub fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
         let managed_serial_ports = self.managed_serial_ports()?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
@@ -135,9 +164,9 @@ impl AppStateInner {
         Ok(managed_serial_port.map(|port| port.is_closed()))
     }
 
-    /// Some(Ok()) => Ok
-    /// Some(Err(_)) => Send error
-    /// None => Port not found
+    /// - `Some(Ok())` => Ok
+    /// - `Some(Err(_))` => Send error
+    /// - `None` => Port not found
     pub fn send_to_open_serial_port(
         &self,
         name: &str,
@@ -157,6 +186,10 @@ impl AppStateInner {
         self.subscriptions.clone()
     }
 
+    /// `to` is subscribed to `from`.
+    ///
+    /// - `from` will send data to `to`.
+    /// - `to` will receive data from `from`.
     pub fn subscribe(&self, from: &str, to: &str) {
         tracing::debug!(%from, %to, "Subscribing");
 
@@ -174,6 +207,10 @@ impl AppStateInner {
             .insert(to.to_string(), tx_handle);
     }
 
+    /// `to` is unsubscribed from `from`.
+    ///
+    /// - `from` will no longer send data to `to`.
+    /// - `to` will no longer receive data from `from`.
     pub fn unsubscribe(&self, from: &str, to: &str) {
         tracing::debug!(%from, %to, "Unsubscribing");
 

@@ -10,6 +10,8 @@ pub struct OpenSerialPort {
     cancellation_token: CancellationToken,
 }
 
+/// Used to copy the [`OpenSerialPort::tx`] field from [`OpenSerialPort`].
+/// Used as a handle to send data to a serial port that is a subscriber to another serial port.
 #[derive(Debug)]
 pub struct TxHandle {
     serial_port: SerialPort,
