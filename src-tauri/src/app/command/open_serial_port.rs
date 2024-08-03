@@ -129,6 +129,7 @@ pub async fn open_serial_port_intern(
             tracing::trace!(target: "serial_vau::serial::write::string", name=%write_name, value=%String::from_utf8_lossy(&value), "Sending");
 
             tokio::select! {
+                // Note: Might get stuck here, therefor the cancellation token.
                 send_result = framed_write_bytes_port.send(value) => {
                     match send_result {
                         Ok(_) => {
