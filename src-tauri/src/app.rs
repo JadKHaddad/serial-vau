@@ -6,6 +6,7 @@ use command::{
     send_to_all_serial_ports::send_to_all_serial_ports_intern,
     send_to_serial_port::send_to_serial_port_intern,
     subscribe::{subscribe_intern, unsubscribe_intern},
+    toggle_read_state::toggle_read_state_intern,
 };
 use error::AppError;
 use state::AppState;
@@ -102,6 +103,19 @@ pub fn unsubscribe(
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
+pub fn toggle_read_state(
+    name: &str,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    toggle_read_state_intern(name, &state)?;
+    refresh_serial_ports_intern(&app, &state)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip_all)]
 fn do_error() -> Result<(), AppError> {
     return Err(anyhow::anyhow!("Oops!").into());
 }
@@ -178,6 +192,7 @@ pub fn run() -> anyhow::Result<()> {
             send_to_all_serial_ports,
             subscribe,
             unsubscribe,
+            toggle_read_state,
             do_error
         ])
         .run(tauri::generate_context!())

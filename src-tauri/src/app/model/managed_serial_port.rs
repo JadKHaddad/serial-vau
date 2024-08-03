@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+use crate::app::state::open_serial_port::ReadState;
+
 #[derive(Debug, Serialize)]
 pub enum Status {
     Closed,
@@ -12,6 +14,8 @@ pub struct ManagedSerialPort {
     pub status: Status,
     pub subscriptions: Vec<String>,
     pub subscribed_to: Vec<String>,
+    // TODO: remove the option, and move read_state to Status::Open
+    pub read_state: Option<ReadState>,
 }
 
 impl ManagedSerialPort {

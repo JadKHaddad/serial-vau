@@ -78,10 +78,12 @@ impl AppStateInner {
                     status: Status::Closed,
                     subscriptions,
                     subscribed_to,
+                    read_state: None,
                 };
 
-                if open_serial_ports.contains_key(port.name()) {
-                    managed_serial_port.status = Status::Open
+                if let Some(open_serial_port) = open_serial_ports.get(port.name()) {
+                    managed_serial_port.status = Status::Open;
+                    managed_serial_port.read_state = Some(open_serial_port.read_state());
                 }
 
                 managed_serial_port
@@ -198,7 +200,7 @@ impl AppStateInner {
         let tx_handle = self
             .open_serial_ports
             .read()
-            .get(from)
+            .get(to)
             .map(|port| port.tx_handle());
 
         subscriptions
@@ -219,6 +221,16 @@ impl AppStateInner {
         subscriptions
             .get_mut(from)
             .and_then(|tx_handles| tx_handles.remove(to));
+    }
+
+    /// - `Some(())` => Ok
+    /// - `None` => Port not found
+    pub fn toggle_read_state(&self, name: &str) -> Option<()> {
+        tracing::debug!(name=%name, "Toggling read state");
+
+        return self.open_serial_ports.read().get(name).map(|port| {
+            port.set_read_state(port.read_state().toggle());
+        });
     }
 }
 

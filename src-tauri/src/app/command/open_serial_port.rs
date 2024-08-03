@@ -8,13 +8,17 @@ use tokio_util::{
 };
 
 use crate::{
-    app::state::{open_serial_port::OpenSerialPort, AppState, ManagedSerialPortsError},
+    app::state::{
+        open_serial_port::{OpenSerialPort, ReadState},
+        AppState, ManagedSerialPortsError,
+    },
     serial::SerialPort,
 };
 
 #[derive(Debug, Deserialize)]
 pub struct OpenSerialPortOptions {
     name: String,
+    initial_read_state: ReadState,
 }
 
 pub async fn open_serial_port_intern(
@@ -43,14 +47,18 @@ pub async fn open_serial_port_intern(
     let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
     let mut framed_write_bytes_port = FramedWrite::new(port_write, BytesCodec::new());
 
+    let (read_state_tx, mut read_state_rx) =
+        tokio::sync::watch::channel(options.initial_read_state);
+
     state.add_open_serial_port(OpenSerialPort::new(
         SerialPort::new(options.name.clone()),
         tx,
         cancellation_token.clone(),
+        read_state_tx,
     ));
 
     let subscriptions = state.subscriptions();
-    let read_state = state.clone();
+    let read_app_state = state.clone();
     let read_cancellation_token = cancellation_token.clone();
     let read_name = options.name.clone();
 
@@ -58,59 +66,103 @@ pub async fn open_serial_port_intern(
         let mut lines_codec = LinesCodec::new();
         let mut lines_bytes = BytesMut::new();
 
-        loop {
-            tokio::select! {
-                // TODO: add the option to read or not read.
-                bytes = framed_read_bytes_port.next() => {
-                    match bytes {
-                        Some(Ok(bytes)) => {
-                            tracing::trace!(target: "serial_vau::serial::read::byte", name=%read_name, ?bytes, "Read");
+        // Trigger the initial read state.
+        read_state_rx.mark_changed();
 
-                            if let Some( subscriptions) = subscriptions.read().get(&read_name){
-                                for (subscriber_name, tx_handle) in subscriptions {
-                                    if let Some(tx_handle) = tx_handle {
-                                        tracing::trace!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
-                                        if let Err(err) = tx_handle.send(bytes.clone().into()) {
-                                            tracing::error!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
+        loop {
+            tracing::debug!(target: "serial_vau::serial::read:.watch", name=%read_name, "Waiting for read state change");
+            tokio::select! {
+                changed_result = read_state_rx.changed() => {
+                    match changed_result {
+                        Ok(_) => {
+                            let read_state = *read_state_rx.borrow();
+                            tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, ?read_state, "Read state changed");
+
+                            if read_state.is_stop() {
+
+                                continue;
+                            }
+
+                            tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Started reading");
+                            loop {
+                                tokio::select! {
+                                    bytes = framed_read_bytes_port.next() => {
+                                        match bytes {
+                                            Some(Ok(bytes)) => {
+                                                tracing::trace!(target: "serial_vau::serial::read::byte", name=%read_name, ?bytes, "Read");
+
+                                                if let Some( subscriptions) = subscriptions.read().get(&read_name){
+                                                    for (subscriber_name, tx_handle) in subscriptions {
+                                                        if let Some(tx_handle) = tx_handle {
+                                                            tracing::trace!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
+                                                            if let Err(err) = tx_handle.send(bytes.clone().into()) {
+                                                                tracing::error!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                lines_bytes.extend_from_slice(&bytes);
+
+                                                loop {
+                                                    match lines_codec.decode(&mut lines_bytes) {
+                                                        Ok(None) => break,
+                                                        Ok(Some(line)) => {
+                                                            tracing::trace!(target: "serial_vau::serial::read::line", name=%read_name, %line, "Read");
+                                                        }
+                                                        Err(err) => {
+                                                            tracing::warn!(target: "serial_vau::serial::read::line", name=%read_name, %err, "Failed to decode line");
+
+                                                            // Clear the buffer to prevent further errors.
+                                                            lines_bytes.clear();
+
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            Some(Err(err)) => {
+                                                tracing::error!(target: "serial_vau::serial::read", name=%read_name, %err);
+
+                                                // Removing the port will drop the sender causing the write loop to break.
+                                                tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Removing serial port due to an error");
+                                                read_app_state.remove_open_serial_port(&read_name);
+
+                                                break;
+                                            }
+                                            _ => {}
+                                        }
+                                    },
+                                    _ = read_cancellation_token.cancelled() => {
+                                        // At this point we should have been removed and cancelled. Nothing to do here.
+                                        tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Cancelled");
+
+                                        break;
+                                    }
+                                    _ = read_state_rx.changed() => {
+                                        let read_state = *read_state_rx.borrow();
+                                        tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, ?read_state, "Read state changed");
+
+                                        if read_state.is_stop() {
+                                            tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Stopped reading");
+
+                                            break;
                                         }
                                     }
                                 }
                             }
-
-                            lines_bytes.extend_from_slice(&bytes);
-
-                            loop {
-                                match lines_codec.decode(&mut lines_bytes) {
-                                    Ok(None) => break,
-                                    Ok(Some(line)) => {
-                                        tracing::trace!(target: "serial_vau::serial::read::line", name=%read_name, %line, "Read");
-                                    }
-                                    Err(err) => {
-                                        tracing::warn!(target: "serial_vau::serial::read::line", name=%read_name, %err, "Failed to decode line");
-
-                                        // Clear the buffer to prevent further errors.
-                                        lines_bytes.clear();
-
-                                        break;
-                                    }
-                                }
-                            }
                         }
-                        Some(Err(err)) => {
-                            tracing::error!(target: "serial_vau::serial::read", name=%read_name, %err);
 
-                            // Removing the port will drop the sender causing the write loop to break.
-                            tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Removing serial port due to an error");
-                            read_state.remove_open_serial_port(&read_name);
+                        Err(_) => {
+                            // Open port was probably removed.
+                            tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, "Read state watch task terminated");
 
                             break;
                         }
-                        _ => {}
                     }
                 },
                 _ = read_cancellation_token.cancelled() => {
-                    // At this point we should have been removed and cancelled. Nothing to do here.
-                    tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Cancelled");
+                    tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, "Cancelled");
 
                     break;
                 }

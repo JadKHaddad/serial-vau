@@ -1,13 +1,29 @@
-use tokio::sync::mpsc::{error::SendError as TokioSendError, UnboundedSender};
+use serde::{Deserialize, Serialize};
+use tokio::sync::{
+    mpsc::{error::SendError as TokioSendError, UnboundedSender as MPSCUnboundedSender},
+    watch::Sender as WatchSender,
+};
 use tokio_util::{bytes::Bytes, sync::CancellationToken};
 
 use crate::serial::SerialPort;
 
-#[derive(Debug)]
-pub struct OpenSerialPort {
-    serial_port: SerialPort,
-    tx: UnboundedSender<Bytes>,
-    cancellation_token: CancellationToken,
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum ReadState {
+    Read,
+    Stop,
+}
+
+impl ReadState {
+    pub fn is_stop(&self) -> bool {
+        matches!(self, Self::Stop)
+    }
+
+    pub fn toggle(self) -> Self {
+        match self {
+            Self::Read => Self::Stop,
+            Self::Stop => Self::Read,
+        }
+    }
 }
 
 /// Used to copy the [`OpenSerialPort::tx`] field from [`OpenSerialPort`].
@@ -15,7 +31,7 @@ pub struct OpenSerialPort {
 #[derive(Debug)]
 pub struct TxHandle {
     serial_port: SerialPort,
-    tx: UnboundedSender<Bytes>,
+    tx: MPSCUnboundedSender<Bytes>,
 }
 
 impl TxHandle {
@@ -28,16 +44,26 @@ impl TxHandle {
     }
 }
 
+#[derive(Debug)]
+pub struct OpenSerialPort {
+    serial_port: SerialPort,
+    tx: MPSCUnboundedSender<Bytes>,
+    cancellation_token: CancellationToken,
+    read_state_tx: WatchSender<ReadState>,
+}
+
 impl OpenSerialPort {
     pub fn new(
         serial_port: SerialPort,
-        tx: UnboundedSender<Bytes>,
+        tx: MPSCUnboundedSender<Bytes>,
         cancellation_token: CancellationToken,
+        read_state_tx: WatchSender<ReadState>,
     ) -> Self {
         Self {
             serial_port,
             tx,
             cancellation_token,
+            read_state_tx,
         }
     }
 
@@ -65,6 +91,15 @@ impl OpenSerialPort {
             serial_port: self.serial_port.clone(),
             tx: self.tx.clone(),
         }
+    }
+
+    /// Fails silently if the send fails. Open serial Port is probably closed.
+    pub(super) fn set_read_state(&self, read_state: ReadState) {
+        let _ = self.read_state_tx.send(read_state);
+    }
+
+    pub(super) fn read_state(&self) -> ReadState {
+        *self.read_state_tx.borrow()
     }
 }
 

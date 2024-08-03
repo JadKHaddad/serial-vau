@@ -11,6 +11,10 @@
             <v-icon :color="port.status === Status.Open ? 'green' : 'red'" :size="16">
               {{ port.status === Status.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
             </v-icon>
+            <v-icon v-if="port.read_state" :color="port.read_state === ReadState.Read ? 'green' : 'red'" :size="16"
+              class="ml-2">
+              {{ port.read_state === ReadState.Read ? 'mdi-play-circle-outline' : 'mdi-stop-circle-outline' }}
+            </v-icon>
           </v-row>
 
           <v-list-item-subtitle class="mb-4">Subscriptions:</v-list-item-subtitle>
@@ -44,11 +48,14 @@
               </v-list>
             </v-menu>
 
-            <v-btn @click="openSerialPort({ name: port.name })" variant="plain">
+            <v-btn @click="openSerialPort({ name: port.name, initial_read_state: ReadState.Read })" variant="plain">
               Open
             </v-btn>
             <v-btn @click="closeSerialPort(port.name)" variant="plain">
               Close
+            </v-btn>
+            <v-btn @click="toggleReadState(port.name)" variant="plain">
+              Toggle Read
             </v-btn>
           </v-list-item-action>
 
@@ -86,15 +93,22 @@ enum Status {
   Open = "Open",
 }
 
+enum ReadState {
+  Read = "Read",
+  Stop = "Stop",
+}
+
 interface ManagedSerialPort {
   name: string;
   status: Status;
   subscriptions: string[];
   subscribed_to: string[];
+  read_state?: ReadState;
 }
 
 interface OpenSerialPortOptions {
   name: string;
+  initial_read_state: ReadState;
 }
 
 const managedSerialPorts = ref<ManagedSerialPort[]>([]);
@@ -207,6 +221,16 @@ const subscribe = (from: string, to: string) => {
 
 const unsubscribe = (from: string, to: string) => {
   invoke('unsubscribe', { from, to })
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};
+
+const toggleReadState = (name: string) => {
+  invoke('toggle_read_state', { name })
     .then((response) => {
 
     })
