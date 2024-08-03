@@ -6,7 +6,23 @@
         <v-list-item v-for="(port, index) in managedSerialPorts" :key="port.name">
           <v-list-item-title class="mb-4">{{ port.name }}</v-list-item-title>
           <v-list-item-subtitle class="mb-4">{{ port.status }}</v-list-item-subtitle>
-          <v-text-field v-model="portValues[index]" label="Enter value"></v-text-field>
+
+          <v-list-item-subtitle class="mb-4">Subscriptions:</v-list-item-subtitle>
+          <v-chip-group column>
+            <v-chip class="mb-4" v-for="(subscription, subIndex) in port.subscriptions" :key="subIndex">
+              {{ subscription }}
+            </v-chip>
+          </v-chip-group>
+
+          <v-list-item-subtitle class="mb-4">Subscribed To:</v-list-item-subtitle>
+          <v-chip-group column>
+            <v-chip class="mb-4" v-for="(subscribed, subToIndex) in port.subscribed_to" :key="subToIndex">
+              {{ subscribed }}
+            </v-chip>
+          </v-chip-group>
+
+          <v-text-field v-model="portValues[index]" label="Send value"></v-text-field>
+
           <v-list-item-action>
             <v-btn @click="openSerialPort({ name: port.name })" variant="plain">
               Open
@@ -18,6 +34,18 @@
               Send
             </v-btn>
           </v-list-item-action>
+
+          <v-text-field v-model="subscriptionInputs[index].subscribeTo" label="Subscribe to"></v-text-field>
+          <v-btn @click="subscribe(subscriptionInputs[index].subscribeTo, port.name)" class="mb-4">
+            Subscribe
+          </v-btn>
+
+          <v-text-field v-model="subscriptionInputs[index].unsubscribeFrom" label="Unsubscribe from"></v-text-field>
+          <v-btn @click="unsubscribe(subscriptionInputs[index].unsubscribeFrom, port.name)" class="mb-4">
+            Unsubscribe
+          </v-btn>
+
+          <v-divider class="mb-4 mt-4"></v-divider>
         </v-list-item>
       </v-list>
 
@@ -49,22 +77,33 @@ enum Status {
 interface ManagedSerialPort {
   name: string;
   status: Status;
+  subscriptions: string[];
+  subscribed_to: string[];
 }
 
 interface OpenSerialPortOptions {
   name: string;
 }
 
+interface SubscriptionInputs {
+  subscribeTo: string;
+  unsubscribeFrom: string;
+}
+
 const managedSerialPorts = ref<ManagedSerialPort[]>([]);
 const portValues = ref<string[]>([]);
 const broadcastValue = ref<string>('');
+const subscriptionInputs = ref<SubscriptionInputs[]>([]);
 
 let unlistenSerialPortsEvent: UnlistenFn;
 
 onMounted(async () => {
   unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
     managedSerialPorts.value = event.payload as ManagedSerialPort[];
-    portValues.value = managedSerialPorts.value.map(() => ''); // Initialize port values
+    portValues.value = managedSerialPorts.value.map(() => ''); subscriptionInputs.value = managedSerialPorts.value.map(() => ({
+      subscribeTo: '',
+      unsubscribeFrom: ''
+    }));
   });
 
   refreshSerialPorts();
@@ -128,6 +167,26 @@ const sendToSerialPort = (name: string, value: string) => {
 
 const sendToAllSerialPorts = (value: string) => {
   invoke('send_to_all_serial_ports', { value })
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};
+
+const subscribe = (from: string, to: string) => {
+  invoke('subscribe', { from, to })
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};
+
+const unsubscribe = (from: string, to: string) => {
+  invoke('unsubscribe', { from, to })
     .then((response) => {
 
     })

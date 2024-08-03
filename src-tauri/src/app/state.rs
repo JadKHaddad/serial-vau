@@ -95,20 +95,20 @@ impl AppStateInner {
         }
     }
 
-    fn remove_from_all_subscriptions(&self, name_to_remove: &str) {
-        tracing::debug!(name=%name_to_remove, "Removing serial port as subscriber from all subscriptions");
+    fn remove_remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
+        tracing::debug!(name=%name, "Removing serial port as subscriber from all subscriptions");
 
         let mut subscriptions = self.subscriptions.write();
 
         for (_, tx_handles) in subscriptions.iter_mut() {
-            tx_handles.remove(name_to_remove);
+            tx_handles.get_mut(name).map(|tx_handle| tx_handle.take());
         }
     }
 
     pub fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
         tracing::debug!(name=%name, "Removing serial port");
 
-        self.remove_from_all_subscriptions(name);
+        self.remove_remove_open_serial_port_from_all_subscriptions(name);
         self.open_serial_ports.write().remove(name)
     }
 

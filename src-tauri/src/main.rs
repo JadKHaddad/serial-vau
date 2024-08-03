@@ -14,7 +14,10 @@ fn init_tracing() -> anyhow::Result<()> {
 
 fn main() -> anyhow::Result<()> {
     if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "serial_vau=trace");
+        std::env::set_var(
+            "RUST_LOG",
+            "serial_vau=trace,serial_vau::serial::read::line=off,serial_vau::serial::write::string=off",
+        );
     }
 
     init_tracing()?;

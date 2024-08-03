@@ -51,7 +51,7 @@ pub async fn open_serial_port_intern(
 
     let subscriptions = state.subscriptions();
     let read_state = state.clone();
-    let read_cancellation_token = cancellation_token;
+    let read_cancellation_token = cancellation_token.clone();
     let read_name = options.name.clone();
 
     tokio::spawn(async move {
@@ -68,8 +68,9 @@ pub async fn open_serial_port_intern(
                             if let Some( subscriptions) = subscriptions.read().get(&read_name){
                                 for (subscriber_name, tx_handle) in subscriptions {
                                     if let Some(tx_handle) = tx_handle {
+                                        tracing::trace!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
                                         if let Err(err) = tx_handle.send(bytes.clone().into()) {
-                                            tracing::error!(target: "serial_vau::serial::read", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
+                                            tracing::error!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
                                         }
                                     }
                                 }
@@ -95,7 +96,7 @@ pub async fn open_serial_port_intern(
                             }
                         }
                         Some(Err(err)) => {
-                            tracing::error!(name=%read_name, %err);
+                            tracing::error!(target: "serial_vau::serial::read", name=%read_name, %err);
 
                             // Removing the port will drop the sender causing the write loop to break.
                             tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Removing serial port due to an error");
@@ -119,18 +120,31 @@ pub async fn open_serial_port_intern(
     });
 
     let write_name = options.name.clone();
+    let write_cancellation_token = cancellation_token;
+
     tokio::spawn(async move {
         // Dropping the sender will automatically break the loop.
         while let Some(value) = rx.recv().await {
             tracing::trace!(target: "serial_vau::serial::write::byte", name=%write_name, value=?value, "Sending");
             tracing::trace!(target: "serial_vau::serial::write::string", name=%write_name, value=%String::from_utf8_lossy(&value), "Sending");
 
-            match framed_write_bytes_port.send(value).await {
-                Ok(_) => {}
-                Err(err) => {
-                    // If the write fails we just break out of the loop.
-                    // Read task must have also been terminated due to the same error.
-                    tracing::error!(target: "serial_vau::serial::write", name=%write_name, %err);
+            tokio::select! {
+                send_result = framed_write_bytes_port.send(value) => {
+                    match send_result {
+                        Ok(_) => {
+                            tracing::trace!(target: "serial_vau::serial::write::result", "Ok");
+                        }
+                        Err(err) => {
+                            // If the write fails we just break out of the loop.
+                            // Read task must have also been terminated due to the same error.
+                            tracing::error!(target: "serial_vau::serial::write::result", name=%write_name, %err);
+
+                            break;
+                        }
+                    }
+                },
+                _ = write_cancellation_token.cancelled() => {
+                    tracing::debug!(target: "serial_vau::serial::write::result", name=%write_name, "Cancelled");
 
                     break;
                 }
