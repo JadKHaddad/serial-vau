@@ -30,11 +30,13 @@ impl ReadState {
 /// Used to copy the [`OpenSerialPort::tx`] field from [`OpenSerialPort`].
 /// Used as a handle to send data to a serial port that is a subscriber to another serial port.
 #[derive(Debug)]
+#[cfg(feature = "subscriptions")]
 pub struct TxHandle {
     serial_port: SerialPort,
     tx: MPSCUnboundedSender<Bytes>,
 }
 
+#[cfg(feature = "subscriptions")]
 impl TxHandle {
     pub fn send(&self, value: Bytes) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
@@ -93,6 +95,7 @@ impl OpenSerialPort {
         Ok(self.tx.send(value)?)
     }
 
+    #[cfg(feature = "subscriptions")]
     pub(super) fn tx_handle(&self) -> TxHandle {
         TxHandle {
             serial_port: self.serial_port.clone(),

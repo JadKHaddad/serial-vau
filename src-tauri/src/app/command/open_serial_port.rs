@@ -57,6 +57,7 @@ pub async fn open_serial_port_intern(
         read_state_tx,
     ));
 
+    #[cfg(feature = "subscriptions")]
     let subscriptions = state.subscriptions();
     let read_app_state = state.clone();
     let read_cancellation_token = cancellation_token.clone();
@@ -91,7 +92,8 @@ pub async fn open_serial_port_intern(
                                             Some(Ok(bytes)) => {
                                                 tracing::trace!(target: "serial_vau::serial::read::byte", name=%read_name, ?bytes, "Read");
 
-                                                if let Some( subscriptions) = subscriptions.read().get(&read_name){
+                                                #[cfg(feature = "subscriptions")]
+                                                if let Some(subscriptions) = subscriptions.read().get(&read_name){
                                                     for (subscriber_name, tx_handle) in subscriptions {
                                                         if let Some(tx_handle) = tx_handle {
                                                             tracing::trace!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");

@@ -12,7 +12,9 @@ pub enum Status {
 pub struct ManagedSerialPort {
     pub name: String,
     pub status: Status,
+    #[cfg(feature = "subscriptions")]
     pub subscriptions: Vec<String>,
+    #[cfg(feature = "subscriptions")]
     pub subscribed_to: Vec<String>,
     // TODO: remove the option, and move read_state to Status::Open
     pub read_state: Option<ReadState>,

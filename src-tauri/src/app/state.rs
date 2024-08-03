@@ -1,6 +1,9 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use open_serial_port::{OpenSerialPort, SendError, TxHandle};
+#[cfg(feature = "subscriptions")]
+use open_serial_port::TxHandle;
+use open_serial_port::{OpenSerialPort, SendError};
+
 use parking_lot::RwLock;
 use tokio_util::bytes::Bytes;
 
@@ -48,6 +51,7 @@ pub struct AppStateInner {
     /// - Subscriptions can exist even if the `name` of a serial port does not exist (yet).
     /// - Subscriptions are not removed when the master or subscriber is closed or removed from system.
     /// - Subscriptions are removed manually.
+    #[cfg(feature = "subscriptions")]
     subscriptions: Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>>,
 }
 
@@ -55,17 +59,20 @@ impl AppStateInner {
     pub fn managed_serial_ports(&self) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
         let available_serial_ports = crate::serial::available_ports()?;
         let open_serial_ports = self.open_serial_ports.read();
+        #[cfg(feature = "subscriptions")]
         let subscriptions = self.subscriptions.read();
 
         let managed_serial_ports = available_serial_ports
             .into_iter()
             .map(|port| {
+                #[cfg(feature = "subscriptions")]
                 let subscribed_to = subscriptions
                     .iter()
                     .filter(|&(_, tx_handles)| tx_handles.contains_key(port.name()))
                     .map(|(name, _)| name.clone())
                     .collect::<Vec<_>>();
 
+                #[cfg(feature = "subscriptions")]
                 let subscriptions = subscriptions
                     .get(port.name())
                     .unwrap_or(&HashMap::new())
@@ -76,7 +83,9 @@ impl AppStateInner {
                 let mut managed_serial_port = ManagedSerialPort {
                     name: port.name().to_string(),
                     status: Status::Closed,
+                    #[cfg(feature = "subscriptions")]
                     subscriptions,
+                    #[cfg(feature = "subscriptions")]
                     subscribed_to,
                     read_state: None,
                 };
@@ -97,6 +106,7 @@ impl AppStateInner {
     pub fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
 
+        #[cfg(feature = "subscriptions")]
         self.add_open_serial_port_to_pending_subscriptions(&open_serial_port);
 
         self.open_serial_ports
@@ -107,6 +117,7 @@ impl AppStateInner {
     /// Sets the [`Option<TxHandle>`] of the given serial port to `Some(TxHandle)` in all subscriptions.
     ///
     /// A subscription can exist before the subscriber is open.
+    #[cfg(feature = "subscriptions")]
     fn add_open_serial_port_to_pending_subscriptions(&self, open_serial_port: &OpenSerialPort) {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port to pending subscriptions");
 
@@ -124,7 +135,8 @@ impl AppStateInner {
     /// Sets the [`Option<TxHandle>`] of the given serial port to `None` in all subscriptions.
     ///
     /// The subscription will not be removed.
-    fn remove_remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
+    #[cfg(feature = "subscriptions")]
+    fn remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
         tracing::debug!(name=%name, "Removing serial port as subscriber from all subscriptions");
 
         let mut subscriptions = self.subscriptions.write();
@@ -138,7 +150,8 @@ impl AppStateInner {
     pub fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
         tracing::debug!(name=%name, "Removing serial port");
 
-        self.remove_remove_open_serial_port_from_all_subscriptions(name);
+        #[cfg(feature = "subscriptions")]
+        self.remove_open_serial_port_from_all_subscriptions(name);
         self.open_serial_ports.write().remove(name)
     }
 
@@ -184,6 +197,7 @@ impl AppStateInner {
         })
     }
 
+    #[cfg(feature = "subscriptions")]
     pub fn subscriptions(&self) -> Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>> {
         self.subscriptions.clone()
     }
@@ -192,6 +206,7 @@ impl AppStateInner {
     ///
     /// - `from` will send data to `to`.
     /// - `to` will receive data from `from`.
+    #[cfg(feature = "subscriptions")]
     pub fn subscribe(&self, from: &str, to: &str) {
         tracing::debug!(%from, %to, "Subscribing");
 
@@ -212,7 +227,8 @@ impl AppStateInner {
     /// `to` is unsubscribed from `from`.
     ///
     /// - `from` will no longer send data to `to`.
-    /// - `to` will no longer receive data from `from`.
+    /// - `to` will no longer receive data from `from`.,
+    #[cfg(feature = "subscriptions")]
     pub fn unsubscribe(&self, from: &str, to: &str) {
         tracing::debug!(%from, %to, "Unsubscribing");
 

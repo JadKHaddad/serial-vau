@@ -81,7 +81,7 @@ pub fn subscribe(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    subscribe_intern(from, to, &state);
+    subscribe_intern(from, to, &state)?;
     refresh_serial_ports_intern(&app, &state)?;
 
     Ok(())
@@ -95,7 +95,7 @@ pub fn unsubscribe(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    unsubscribe_intern(from, to, &state);
+    unsubscribe_intern(from, to, &state)?;
     refresh_serial_ports_intern(&app, &state)?;
 
     Ok(())
