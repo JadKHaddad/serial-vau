@@ -39,6 +39,10 @@ onUnmounted(() => {
   if (unlistenThemeChangedEvent) {
     unlistenThemeChangedEvent();
   }
+
+  if (unlistenSerialPortsEvent) {
+    unlistenSerialPortsEvent();
+  }
 });
 
 const refreshSerialPorts = () => {
