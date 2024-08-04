@@ -14,6 +14,7 @@ pub enum PacketOrigin {
     /// Sent via a broadcast to all open serial ports.
     Broadcast,
     /// Sent via a subscription from another serial port.
+    #[cfg(feature = "subscriptions")]
     Subscription { from: String },
 }
 
@@ -23,6 +24,7 @@ impl std::fmt::Display for PacketOrigin {
         match self {
             Self::Direct => write!(f, "Direct"),
             Self::Broadcast => write!(f, "Broadcast"),
+            #[cfg(feature = "subscriptions")]
             Self::Subscription { from } => write!(f, "Subscription from: [{}]", from),
         }
     }
