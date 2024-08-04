@@ -11,12 +11,12 @@ use command::{
 use error::AppError;
 use state::AppState;
 use tauri::{AppHandle, Manager, State};
-use tokio_util::{bytes::BytesMut, codec::LinesCodec};
 
 use crate::serial::watcher::Watcher as SerialWatcher;
 
 mod command;
 mod error;
+mod event;
 mod model;
 mod state;
 

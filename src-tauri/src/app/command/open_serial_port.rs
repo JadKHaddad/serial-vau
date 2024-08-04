@@ -48,6 +48,10 @@ pub enum IncomingPacketError {
     ),
 }
 
+// FIXME: this should be moved to the state module and app::open_serial_port should replace this.
+// look at refresh_serial_ports_intern where the AppHandle is passed to the function.
+// So open the port in state, because state is tauri unaware.
+// This module is tauri aware, so it's ok to use AppHandle here.
 pub async fn open_serial_port_intern(
     options: OpenSerialPortOptions,
     state: &AppState,
