@@ -29,7 +29,6 @@ onMounted(async () => {
   });
 
   unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
-    console.log('serial_ports_event', event.payload);
     app.managedSerialPorts = event.payload as ManagedSerialPort[];
   });
 
