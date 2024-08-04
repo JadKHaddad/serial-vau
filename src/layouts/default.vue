@@ -2,9 +2,9 @@
   <v-app>
     <AppDrawer />
 
-    <v-main>
-      <v-container class="fill-height fill-width">
-        <v-responsive class="align-center fill-height fill-width mx-auto">
+    <v-main scrollable>
+      <v-container class="fill-width">
+        <v-responsive class="align-center mx-auto">
           <router-view />
         </v-responsive>
       </v-container>
@@ -17,3 +17,9 @@
 <script lang="ts" setup>
 //
 </script>
+
+<style>
+html {
+  overflow-y: auto
+}
+</style>

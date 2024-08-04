@@ -1,5 +1,5 @@
 <template>
-    <v-navigation-drawer rail permanent>
+    <v-navigation-drawer rail permanent app>
         <v-list density="compact" nav>
             <router-link to="/" style="text-decoration: none; color: inherit;">
                 <v-list-item prepend-icon="mdi-serial-port" value="serial-port"></v-list-item>
