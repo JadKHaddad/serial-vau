@@ -1,5 +1,5 @@
 <template>
-  <SerialPorts />
+    <SerialMonitor />
 </template>
 
 <script lang="ts" setup>

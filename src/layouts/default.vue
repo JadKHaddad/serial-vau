@@ -1,7 +1,13 @@
 <template>
   <v-app>
+    <AppDrawer />
+
     <v-main>
-      <router-view />
+      <v-container class="fill-height fill-width">
+        <v-responsive class="align-center fill-height fill-width mx-auto">
+          <router-view />
+        </v-responsive>
+      </v-container>
     </v-main>
 
     <AppFooter />
@@ -9,5 +15,5 @@
 </template>
 
 <script lang="ts" setup>
-  //
+//
 </script>
