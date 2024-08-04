@@ -10,10 +10,15 @@
 import { onMounted, onUnmounted } from 'vue';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { useTheme } from 'vuetify'
+import { useAppStore } from './stores/app';
+import { invoke } from '@tauri-apps/api';
+import { ManagedSerialPort } from './models/models';
 
 const theme = useTheme()
+const app = useAppStore()
 
 let unlistenThemeChangedEvent: UnlistenFn;
+let unlistenSerialPortsEvent: UnlistenFn;
 
 onMounted(async () => {
   unlistenThemeChangedEvent = await listen('tauri://theme-changed', (event) => {
@@ -22,6 +27,13 @@ onMounted(async () => {
       theme.global.name.value = themeName;
     }
   });
+
+  unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
+    console.log('serial_ports_event', event.payload);
+    app.managedSerialPorts = event.payload as ManagedSerialPort[];
+  });
+
+  refreshSerialPorts();
 });
 
 onUnmounted(() => {
@@ -29,4 +41,22 @@ onUnmounted(() => {
     unlistenThemeChangedEvent();
   }
 });
+
+const refreshSerialPorts = () => {
+  invoke('refresh_serial_ports')
+    .then((response) => {
+
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};
+
 </script>
+
+<style>
+/* Remove the scrollbar */
+html {
+  overflow-y: auto
+}
+</style>
