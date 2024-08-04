@@ -19,6 +19,7 @@ const app = useAppStore()
 
 let unlistenThemeChangedEvent: UnlistenFn;
 let unlistenSerialPortsEvent: UnlistenFn;
+let unlistenSerialLineEvent: UnlistenFn;
 
 onMounted(async () => {
   unlistenThemeChangedEvent = await listen('tauri://theme-changed', (event) => {
@@ -32,6 +33,10 @@ onMounted(async () => {
     app.managedSerialPorts = event.payload as ManagedSerialPort[];
   });
 
+  unlistenSerialLineEvent = await listen('serial_line_event', (event) => {
+    console.log(event.payload);
+  });
+
   refreshSerialPorts();
 });
 
@@ -42,6 +47,10 @@ onUnmounted(() => {
 
   if (unlistenSerialPortsEvent) {
     unlistenSerialPortsEvent();
+  }
+
+  if (unlistenSerialLineEvent) {
+    unlistenSerialLineEvent();
   }
 });
 

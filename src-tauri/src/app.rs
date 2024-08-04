@@ -11,6 +11,7 @@ use command::{
 use error::AppError;
 use state::AppState;
 use tauri::{AppHandle, Manager, State};
+use tokio_util::{bytes::BytesMut, codec::LinesCodec};
 
 use crate::serial::watcher::Watcher as SerialWatcher;
 
@@ -32,7 +33,37 @@ pub async fn open_serial_port(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    open_serial_port_intern(options, &state).await?;
+    let incoming_name = options.name().to_string();
+    let outgoing_name = options.name().to_string();
+
+    let (mut incoming_rx, mut outgoing_tx) = open_serial_port_intern(options, &state).await?;
+
+    tokio::spawn(async move {
+        while let Some(packet) = incoming_rx.recv().await {
+            match packet {
+                Ok(packet) => {
+                    // TODO: Send incoming packet event!
+                }
+                Err(err) => {
+                    tracing::error!(%err, from=%incoming_name, "Error receiving data");
+                }
+            }
+        }
+    });
+
+    tokio::spawn(async move {
+        while let Some(packet) = outgoing_tx.recv().await {
+            match packet {
+                Ok(packet) => {
+                    // TODO: Send outgoing packet event!
+                }
+                Err(err) => {
+                    tracing::error!(%err, to=%outgoing_name, "Error sending data");
+                }
+            }
+        }
+    });
+
     refresh_serial_ports_intern(&app, &state)?;
 
     Ok(())

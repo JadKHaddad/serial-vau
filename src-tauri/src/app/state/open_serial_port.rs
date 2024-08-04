@@ -52,6 +52,26 @@ impl OutgoingPacket {
     }
 }
 
+/// Represents a packet that is received from a serial port.
+#[derive(Debug, Clone)]
+pub struct IncomingPacket {
+    pub line: String,
+    timestamp_millis: u64,
+}
+
+impl IncomingPacket {
+    pub fn new_with_current_timestamp(line: String) -> Self {
+        Self {
+            line,
+            timestamp_millis: chrono::Utc::now().timestamp_millis() as u64,
+        }
+    }
+
+    pub fn timestamp_millis(&self) -> u64 {
+        self.timestamp_millis
+    }
+}
+
 /// Defines if an open serial port is currently reading or stopped.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ReadState {

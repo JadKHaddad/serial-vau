@@ -1,15 +1,20 @@
+use std::io::Error as IOError;
+
 use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
+use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
     bytes::BytesMut,
-    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec},
+    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec, LinesCodecError},
     sync::CancellationToken,
 };
 
 use crate::{
     app::state::{
-        open_serial_port::{OpenSerialPort, OutgoingPacket, PacketOrigin, ReadState},
+        open_serial_port::{
+            IncomingPacket, OpenSerialPort, OutgoingPacket, PacketOrigin, ReadState,
+        },
         AppState, ManagedSerialPortsError,
     },
     serial::SerialPort,
@@ -21,10 +26,38 @@ pub struct OpenSerialPortOptions {
     initial_read_state: ReadState,
 }
 
+impl OpenSerialPortOptions {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum IncomingPacketError {
+    #[error("An IO error occurred: {0}")]
+    IO(
+        #[source]
+        #[from]
+        IOError,
+    ),
+    #[error("Failed to decode incoming packet: {0}")]
+    Codec(
+        #[source]
+        #[from]
+        LinesCodecError,
+    ),
+}
+
 pub async fn open_serial_port_intern(
     options: OpenSerialPortOptions,
     state: &AppState,
-) -> Result<(), OpenSerialPortError> {
+) -> Result<
+    (
+        MPSCUnboundedReceiver<Result<IncomingPacket, IncomingPacketError>>,
+        MPSCUnboundedReceiver<Result<OutgoingPacket, IOError>>,
+    ),
+    OpenSerialPortError,
+> {
     tracing::info!(?options, "Opening serial port");
 
     let port_to_open_name = state
@@ -42,6 +75,10 @@ pub async fn open_serial_port_intern(
 
     let (port_read, port_write) = tokio::io::split(port);
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<OutgoingPacket>();
+    let (incomig_packet_tx, incomig_packet_rx) =
+        tokio::sync::mpsc::unbounded_channel::<Result<IncomingPacket, IncomingPacketError>>();
+    let (outgoing_packet_tx, outgoing_packet_rx) =
+        tokio::sync::mpsc::unbounded_channel::<Result<OutgoingPacket, IOError>>();
     let cancellation_token = CancellationToken::new();
 
     let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
@@ -107,6 +144,7 @@ pub async fn open_serial_port_intern(
                                                     }
                                                 }
 
+
                                                 lines_bytes.extend_from_slice(&bytes);
 
                                                 loop {
@@ -115,12 +153,17 @@ pub async fn open_serial_port_intern(
                                                         Ok(Some(line)) => {
                                                             tracing::trace!(target: "serial_vau::serial::read::line", name=%read_name, %line, "Read");
 
-                                                            // TODO: feedback to frontend
+                                                            // Feedback
+                                                            let _ = incomig_packet_tx.send(
+                                                                Ok(IncomingPacket::new_with_current_timestamp(line))
+                                                            );
+
                                                         }
                                                         Err(err) => {
                                                             tracing::warn!(target: "serial_vau::serial::read::line", name=%read_name, %err, "Failed to decode line");
 
-                                                            // TODO: feedback to frontend
+                                                            // Feedback
+                                                            let _ = incomig_packet_tx.send(Err(err.into()));
 
                                                             // Clear the buffer to prevent further errors.
                                                             lines_bytes.clear();
@@ -132,6 +175,9 @@ pub async fn open_serial_port_intern(
                                             }
                                             Some(Err(err)) => {
                                                 tracing::error!(target: "serial_vau::serial::read", name=%read_name, %err);
+
+                                                // Feedback
+                                                let _ = incomig_packet_tx.send(Err(err.into()));
 
                                                 // Removing the port will drop the sender causing the write loop to break.
                                                 tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Removing serial port due to an error");
@@ -192,19 +238,21 @@ pub async fn open_serial_port_intern(
 
             tokio::select! {
                 // Note: Might get stuck here, therefor the cancellation token.
-                send_result = framed_write_bytes_port.send(packet.data) => {
+                send_result = framed_write_bytes_port.send(packet.data.clone()) => {
                     match send_result {
                         Ok(_) => {
                             tracing::trace!(target: "serial_vau::serial::write::result", name=%write_name, origin=%packet.origin, "Ok");
 
-                            // TODO: feedback to frontend
+                            // Feedback
+                            let _ = outgoing_packet_tx.send(Ok(packet));
                         }
                         Err(err) => {
                             // If the write fails we just break out of the loop.
                             // Read task must have also been terminated due to the same error.
                             tracing::error!(target: "serial_vau::serial::write::result", name=%write_name, origin=?packet.origin, %err);
 
-                            // TODO: feedback to frontend
+                            // Feedback
+                            let _ = outgoing_packet_tx.send(Err(err));
 
                             break;
                         }
@@ -221,7 +269,7 @@ pub async fn open_serial_port_intern(
         tracing::debug!(target: "serial_vau::serial::write", name=%write_name, "Write task terminated")
     });
 
-    Ok(())
+    Ok((incomig_packet_rx, outgoing_packet_rx))
 }
 
 #[derive(Debug, thiserror::Error)]
