@@ -29,6 +29,7 @@ tokio-serial = "5.4.4"
 wmi = "0.13.3"
 parking_lot = "0.12.3"
 futures = "0.3.0"
+chrono = "0.4.38"
 
 [patch.crates-io]
 mio-serial = { git = "https://github.com/JadKHaddad/mio-serial.git", branch = "stop-bits-unwrap-or-one" }

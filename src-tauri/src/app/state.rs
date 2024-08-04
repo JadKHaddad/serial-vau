@@ -2,10 +2,8 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 #[cfg(feature = "subscriptions")]
 use open_serial_port::TxHandle;
-use open_serial_port::{OpenSerialPort, SendError};
-
+use open_serial_port::{OpenSerialPort, OutgoingPacket, SendError};
 use parking_lot::RwLock;
-use tokio_util::bytes::Bytes;
 
 use crate::serial::AvailablePortsError;
 
@@ -185,15 +183,15 @@ impl AppStateInner {
     pub fn send_to_open_serial_port(
         &self,
         name: &str,
-        value: Bytes,
+        packet: OutgoingPacket,
     ) -> Option<Result<(), SendError>> {
-        Some(self.open_serial_ports.read().get(name)?.send(value))
+        Some(self.open_serial_ports.read().get(name)?.send(packet))
     }
 
-    pub fn send_to_all_open_serial_ports(&self, value: Bytes) {
+    pub fn send_to_all_open_serial_ports(&self, packet: OutgoingPacket) {
         self.open_serial_ports.read().values().for_each(|port| {
             // Cheap clone
-            let _ = port.send(value.clone());
+            let _ = port.send(packet.clone());
         })
     }
 

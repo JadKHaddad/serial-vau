@@ -1,9 +1,9 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio_serial::{Error as TokioSerialError, SerialPortInfo};
 
 pub mod watcher;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerialPort {
     name: String,
 }

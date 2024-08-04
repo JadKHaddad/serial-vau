@@ -1,16 +1,21 @@
 use tokio_util::bytes::Bytes;
 
-use crate::app::state::{open_serial_port::SendError, AppState};
+use crate::app::state::{
+    open_serial_port::{OutgoingPacket, PacketOrigin, SendError},
+    AppState,
+};
 
 pub fn send_to_serial_port_intern(
     name: String,
-    value: Bytes,
+    data: Bytes,
     state: &AppState,
 ) -> Result<(), SendToSerialPortError> {
     tracing::info!(name=%name, "Sending to serial port");
 
+    let packet = OutgoingPacket::new_with_current_timestamp(data, PacketOrigin::Direct);
+
     Ok(state
-        .send_to_open_serial_port(&name, value)
+        .send_to_open_serial_port(&name, packet)
         .ok_or(SendToSerialPortError::NotOpen)??)
 }
 

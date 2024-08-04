@@ -2,14 +2,14 @@ use futures::{SinkExt, StreamExt};
 use serde::Deserialize;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
-    bytes::{Bytes, BytesMut},
+    bytes::BytesMut,
     codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec},
     sync::CancellationToken,
 };
 
 use crate::{
     app::state::{
-        open_serial_port::{OpenSerialPort, ReadState},
+        open_serial_port::{OpenSerialPort, OutgoingPacket, PacketOrigin, ReadState},
         AppState, ManagedSerialPortsError,
     },
     serial::SerialPort,
@@ -41,7 +41,7 @@ pub async fn open_serial_port_intern(
         .open_native_async()?;
 
     let (port_read, port_write) = tokio::io::split(port);
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Bytes>();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<OutgoingPacket>();
     let cancellation_token = CancellationToken::new();
 
     let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
@@ -97,7 +97,10 @@ pub async fn open_serial_port_intern(
                                                     for (subscriber_name, tx_handle) in subscriptions {
                                                         if let Some(tx_handle) = tx_handle {
                                                             tracing::trace!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
-                                                            if let Err(err) = tx_handle.send(bytes.clone().into()) {
+
+                                                            let packet = OutgoingPacket::new_with_current_timestamp(bytes.clone().into(), PacketOrigin::Subscription { from: read_name.clone() });
+
+                                                            if let Err(err) = tx_handle.send(packet) {
                                                                 tracing::error!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
                                                             }
                                                         }
@@ -111,9 +114,13 @@ pub async fn open_serial_port_intern(
                                                         Ok(None) => break,
                                                         Ok(Some(line)) => {
                                                             tracing::trace!(target: "serial_vau::serial::read::line", name=%read_name, %line, "Read");
+
+                                                            // TODO: feedback to frontend
                                                         }
                                                         Err(err) => {
                                                             tracing::warn!(target: "serial_vau::serial::read::line", name=%read_name, %err, "Failed to decode line");
+
+                                                            // TODO: feedback to frontend
 
                                                             // Clear the buffer to prevent further errors.
                                                             lines_bytes.clear();
@@ -179,21 +186,25 @@ pub async fn open_serial_port_intern(
 
     tokio::spawn(async move {
         // Dropping the sender will automatically break the loop.
-        while let Some(value) = rx.recv().await {
-            tracing::trace!(target: "serial_vau::serial::write::byte", name=%write_name, value=?value, "Sending");
-            tracing::trace!(target: "serial_vau::serial::write::string", name=%write_name, value=%String::from_utf8_lossy(&value), "Sending");
+        while let Some(packet) = rx.recv().await {
+            tracing::trace!(target: "serial_vau::serial::write::byte", name=%write_name, origin=%packet.origin, data=?packet.data, "Sending");
+            tracing::trace!(target: "serial_vau::serial::write::string", name=%write_name, origin=%packet.origin, data=%String::from_utf8_lossy(&packet.data), "Sending");
 
             tokio::select! {
                 // Note: Might get stuck here, therefor the cancellation token.
-                send_result = framed_write_bytes_port.send(value) => {
+                send_result = framed_write_bytes_port.send(packet.data) => {
                     match send_result {
                         Ok(_) => {
-                            tracing::trace!(target: "serial_vau::serial::write::result",name=%write_name, "Ok");
+                            tracing::trace!(target: "serial_vau::serial::write::result", name=%write_name, origin=%packet.origin, "Ok");
+
+                            // TODO: feedback to frontend
                         }
                         Err(err) => {
                             // If the write fails we just break out of the loop.
                             // Read task must have also been terminated due to the same error.
-                            tracing::error!(target: "serial_vau::serial::write::result", name=%write_name, %err);
+                            tracing::error!(target: "serial_vau::serial::write::result", name=%write_name, origin=?packet.origin, %err);
+
+                            // TODO: feedback to frontend
 
                             break;
                         }
