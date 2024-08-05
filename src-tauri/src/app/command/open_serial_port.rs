@@ -1,6 +1,8 @@
 use tauri::AppHandle;
 
-use crate::app::state::{open_serial_port::OpenSerialPortOptions, AppState, OpenSerialPortError};
+use crate::app::state::{
+    error::OpenSerialPortError, open_serial_port::OpenSerialPortOptions, AppState,
+};
 
 pub async fn open_serial_port_intern(
     options: OpenSerialPortOptions,

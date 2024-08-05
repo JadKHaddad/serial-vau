@@ -1,6 +1,6 @@
-use std::io::Error as IOError;
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, io::Error as IOError, ops::Deref, sync::Arc};
 
+use error::{IncomingPacketError, ManagedSerialPortsError, OpenSerialPortError};
 use futures::{SinkExt, StreamExt};
 #[cfg(feature = "subscriptions")]
 use open_serial_port::TxHandle;
@@ -12,25 +12,16 @@ use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
     bytes::BytesMut,
-    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec, LinesCodecError},
+    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec},
     sync::CancellationToken,
 };
 
-use crate::serial::{AvailablePortsError, SerialPort};
+use crate::serial::SerialPort;
 
 use super::model::managed_serial_port::{ManagedSerialPort, Status};
 
+pub mod error;
 pub mod open_serial_port;
-
-#[derive(Debug, thiserror::Error)]
-pub enum ManagedSerialPortsError {
-    #[error("Failed to get available ports: {0}")]
-    AvailablePortsError(
-        #[source]
-        #[from]
-        AvailablePortsError,
-    ),
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct AppState {
@@ -217,7 +208,7 @@ impl AppStateInner {
     }
 
     #[cfg(feature = "subscriptions")]
-    pub fn subscriptions(&self) -> Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>> {
+    fn subscriptions(&self) -> Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>> {
         self.subscriptions.clone()
     }
 
@@ -493,40 +484,4 @@ impl AppState {
 
         Ok((incomig_packet_rx, outgoing_packet_rx))
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum IncomingPacketError {
-    #[error("An IO error occurred: {0}")]
-    IO(
-        #[source]
-        #[from]
-        IOError,
-    ),
-    #[error("Failed to decode incoming packet: {0}")]
-    Codec(
-        #[source]
-        #[from]
-        LinesCodecError,
-    ),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum OpenSerialPortError {
-    #[error("Failed to get managed ports: {0}")]
-    ManagedSerialPortsError(
-        #[source]
-        #[from]
-        ManagedSerialPortsError,
-    ),
-    #[error("Port not found")]
-    NotFound,
-    #[error("Port already open")]
-    AlreadyOpen,
-    #[error("Failed to open port: {0}")]
-    FailedToOpen(
-        #[source]
-        #[from]
-        tokio_serial::Error,
-    ),
 }
