@@ -8,12 +8,14 @@ use tokio_util::{bytes::Bytes, sync::CancellationToken};
 use crate::serial::SerialPort;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenSerialPortOptions {
     pub name: String,
     pub initial_read_state: ReadState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum PacketOrigin {
     /// Sent directly to the serial port by he user.
     Direct,
@@ -80,6 +82,7 @@ impl IncomingPacket {
 
 /// Defines if an open serial port is currently reading or stopped.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum ReadState {
     Read,
     Stop,

@@ -3,12 +3,14 @@ use serde::Serialize;
 use crate::app::state::open_serial_port::ReadState;
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Status {
     Closed,
     Open,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ManagedSerialPort {
     pub name: String,
     pub status: Status,

@@ -8,9 +8,9 @@
                 <v-icon :color="port.status === Status.Open ? 'green' : 'red'" :size="16">
                     {{ port.status === Status.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
                 </v-icon>
-                <v-icon v-if="port.read_state" :color="port.read_state === ReadState.Read ? 'green' : 'red'" :size="16"
+                <v-icon v-if="port.readState" :color="port.readState === ReadState.Read ? 'green' : 'red'" :size="16"
                     class="ml-2">
-                    {{ port.read_state === ReadState.Read ? 'mdi-play-circle-outline' :
+                    {{ port.readState === ReadState.Read ? 'mdi-play-circle-outline' :
                         'mdi-stop-circle-outline' }}
                 </v-icon>
             </v-row>
@@ -25,7 +25,7 @@
 
             <v-list-item-subtitle class="mb-4">Subscribed To:</v-list-item-subtitle>
             <v-chip-group column>
-                <v-chip class="mb-4" v-for="(subscribed, subToIndex) in port.subscribed_to" :key="subToIndex"
+                <v-chip class="mb-4" v-for="(subscribed, subToIndex) in port.subscribedTo" :key="subToIndex"
                     v-on:click:close="unsubscribe(subscribed, port.name)" closable>
                     {{ subscribed }}
                 </v-chip>
@@ -46,7 +46,7 @@
                     </v-list>
                 </v-menu>
 
-                <v-btn @click="openSerialPort({ name: port.name, initial_read_state: ReadState.Read })" variant="plain">
+                <v-btn @click="openSerialPort({ name: port.name, initialReadState: ReadState.Read })" variant="plain">
                     Open
                 </v-btn>
                 <v-btn @click="closeSerialPort(port.name)" variant="plain">

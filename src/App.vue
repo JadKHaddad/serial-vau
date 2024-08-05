@@ -12,7 +12,7 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { useTheme } from 'vuetify'
 import { useAppStore } from './stores/app';
 import { invoke } from '@tauri-apps/api';
-import { ManagedSerialPort } from './models/models';
+import { ManagedSerialPorts } from './events/managed-serial-ports';
 
 const theme = useTheme()
 const app = useAppStore()
@@ -30,7 +30,8 @@ onMounted(async () => {
   });
 
   unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
-    app.managedSerialPorts = event.payload as ManagedSerialPort[];
+    const managedSerialPortsEvent = event.payload as ManagedSerialPorts;
+    app.managedSerialPorts = managedSerialPortsEvent.ports;
   });
 
   unlistenSerialLineEvent = await listen('serial_line_event', (event) => {

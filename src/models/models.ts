@@ -1,22 +1,22 @@
 export enum Status {
-    Closed = "Closed",
-    Open = "Open",
+    Closed = "closed",
+    Open = "open",
 }
 
 export enum ReadState {
-    Read = "Read",
-    Stop = "Stop",
+    Read = "read",
+    Stop = "stop",
 }
 
 export interface ManagedSerialPort {
     name: string;
     status: Status;
     subscriptions: string[];
-    subscribed_to: string[];
-    read_state?: ReadState;
+    subscribedTo: string[];
+    readState?: ReadState;
 }
 
 export interface OpenSerialPortOptions {
     name: string;
-    initial_read_state: ReadState;
+    initialReadState: ReadState;
 }
