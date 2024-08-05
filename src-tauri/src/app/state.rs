@@ -36,22 +36,25 @@ impl Deref for AppState {
     }
 }
 
+/// - `Key`: Serial port name.
+/// - `Value`: Open serial port [`OpenSerialPort`].
+type OpenSerialPorts = HashMap<String, OpenSerialPort>;
+
+/// - `Key`: Master Serial port name.
+/// - `Value`:  
+///     - `Key`: Subscriber serial port name.
+///     - `Value`: Optional subscriber's [`TxHandle`] to send data to the subscriber.
+///        - `Some(TxHandle)`: Subscriber is open.
+///        - `None`: Subscriber is closed.
+#[cfg(feature = "subscriptions")]
+type Subscriptions = HashMap<String, HashMap<String, Option<TxHandle>>>;
+
 #[derive(Debug, Default)]
 pub struct AppStateInner {
-    /// - `Key`: Serial port name.
-    /// - `Value`: Open serial port [`OpenSerialPort`].
-    ///
     /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
     /// which is used in [`Watcher`](crate::serial::watcher::Watcher),
     /// which is used in [`run`](crate::app::run).
-    open_serial_ports: RwLock<HashMap<String, OpenSerialPort>>,
-    /// - `Key`: Master Serial port name.
-    /// - `Value`:  
-    ///     - `Key`: Subscriber serial port name.
-    ///     - `Value`: Optional subscriber's [`TxHandle`] to send data to the subscriber.
-    ///        - `Some(TxHandle)`: Subscriber is open.
-    ///        - `None`: Subscriber is closed.
-    ///
+    open_serial_ports: RwLock<OpenSerialPorts>,
     /// Closing the Subscriber serial port will set its value to `None`. The subscription will not be removed.
     ///
     /// ## Notes
@@ -62,7 +65,7 @@ pub struct AppStateInner {
     /// - Subscriptions are not removed when the master or subscriber is closed or removed from system.
     /// - Subscriptions are removed manually.
     #[cfg(feature = "subscriptions")]
-    subscriptions: Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>>,
+    subscriptions: Arc<RwLock<Subscriptions>>,
 }
 
 impl AppStateInner {
@@ -208,7 +211,7 @@ impl AppStateInner {
     }
 
     #[cfg(feature = "subscriptions")]
-    fn subscriptions(&self) -> Arc<RwLock<HashMap<String, HashMap<String, Option<TxHandle>>>>> {
+    fn subscriptions(&self) -> Arc<RwLock<Subscriptions>> {
         self.subscriptions.clone()
     }
 
