@@ -1,2 +1,2 @@
 pub mod app;
-mod serial;
+mod core;

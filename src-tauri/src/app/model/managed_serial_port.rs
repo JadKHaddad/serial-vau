@@ -1,13 +1,6 @@
 use serde::Serialize;
 
-use crate::app::state::open_serial_port::ReadState;
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Status {
-    Closed,
-    Open,
-}
+use super::{port_status::Status, read_state::ReadState};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,16 +11,24 @@ pub struct ManagedSerialPort {
     pub subscriptions: Vec<String>,
     #[cfg(feature = "subscriptions")]
     pub subscribed_to: Vec<String>,
-    // TODO: remove the option, and move read_state to Status::Open
     pub read_state: Option<ReadState>,
 }
 
-impl ManagedSerialPort {
-    pub fn is_open(&self) -> bool {
-        matches!(self.status, Status::Open)
-    }
+mod core_impl {
+    use super::*;
+    use crate::core::serial::managed_serial_port::ManagedSerialPort as CoreManagedSerialPort;
 
-    pub fn is_closed(&self) -> bool {
-        matches!(self.status, Status::Closed)
+    impl From<CoreManagedSerialPort> for ManagedSerialPort {
+        fn from(value: CoreManagedSerialPort) -> Self {
+            Self {
+                name: value.name,
+                status: value.status.into(),
+                #[cfg(feature = "subscriptions")]
+                subscriptions: value.subscriptions,
+                #[cfg(feature = "subscriptions")]
+                subscribed_to: value.subscribed_to,
+                read_state: value.read_state.map(Into::into),
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::app::state::AppState;
+use crate::core::state::AppState;
 
 pub async fn close_serial_port_intern(
     name: String,

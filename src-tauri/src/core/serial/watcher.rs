@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use serde::Deserialize;
 use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
 
-use crate::serial::SerialPort;
+use super::SerialPort;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename = "Win32_SerialPort")]

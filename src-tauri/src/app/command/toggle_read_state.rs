@@ -1,4 +1,4 @@
-use crate::app::state::AppState;
+use crate::core::state::AppState;
 
 pub fn toggle_read_state_intern(name: &str, state: &AppState) -> Result<(), ToggleReadStateError> {
     tracing::info!(name=%name, "Toggling read state");

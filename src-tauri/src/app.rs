@@ -1,3 +1,4 @@
+use crate::core::state::AppState;
 use anyhow::Context;
 use command::{
     close_serial_port::close_serial_port_intern,
@@ -9,16 +10,15 @@ use command::{
     toggle_read_state::toggle_read_state_intern,
 };
 use error::AppError;
-use state::{open_serial_port::OpenSerialPortOptions, AppState};
+use model::open_options::OpenSerialPortOptions;
 use tauri::{AppHandle, Manager, State};
 
-use crate::serial::watcher::Watcher as SerialWatcher;
+use crate::core::serial::watcher::Watcher as SerialWatcher;
 
 mod command;
 mod error;
 mod event;
 mod model;
-mod state;
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]

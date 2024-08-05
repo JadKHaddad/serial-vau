@@ -1,9 +1,11 @@
 use tauri::{AppHandle, Manager};
 
-use crate::app::{
-    event::incoming_packet::IncomingPacket as IncomingPacketEvent,
-    model::incoming_packet::IncomingPacket,
-    state::{error::OpenSerialPortError, open_serial_port::OpenSerialPortOptions, AppState},
+use crate::{
+    app::{
+        event::incoming_packet::IncomingPacket as IncomingPacketEvent,
+        model::{incoming_packet::IncomingPacket, open_options::OpenSerialPortOptions},
+    },
+    core::state::{error::OpenSerialPortError, AppState},
 };
 
 pub async fn open_serial_port_intern(
@@ -16,7 +18,7 @@ pub async fn open_serial_port_intern(
     let incoming_name = options.name.clone();
     let outgoing_name = options.name.clone();
 
-    let (mut incoming_rx, mut outgoing_tx) = state.open_serial_port(options).await?;
+    let (mut incoming_rx, mut outgoing_tx) = state.open_serial_port(options.into()).await?;
 
     let app_handle_read = app.clone();
     tokio::spawn(async move {
@@ -26,7 +28,7 @@ pub async fn open_serial_port_intern(
                     let incoming_packet_event = IncomingPacketEvent {
                         incoming_packet: IncomingPacket {
                             from: incoming_name.clone(),
-                            timestamp_millis: packet.timestamp_millis(),
+                            timestamp_millis: packet.timestamp_millis,
                             line: packet.line,
                         },
                     };

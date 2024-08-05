@@ -1,21 +1,20 @@
-use serde::{Deserialize, Serialize};
 use tokio::sync::{
     mpsc::{error::SendError as TokioSendError, UnboundedSender as MPSCUnboundedSender},
     watch::Sender as WatchSender,
 };
 use tokio_util::{bytes::Bytes, sync::CancellationToken};
 
-use crate::serial::SerialPort;
+use crate::core::serial::managed_serial_port::ReadState;
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+use super::SerialPort;
+
+#[derive(Debug)]
 pub struct OpenSerialPortOptions {
     pub name: String,
     pub initial_read_state: ReadState,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub enum PacketOrigin {
     /// Sent directly to the serial port by he user.
     Direct,
@@ -43,7 +42,7 @@ impl std::fmt::Display for PacketOrigin {
 pub struct OutgoingPacket {
     pub data: Bytes,
     pub origin: PacketOrigin,
-    timestamp_millis: u64,
+    pub timestamp_millis: u64,
 }
 
 impl OutgoingPacket {
@@ -54,17 +53,13 @@ impl OutgoingPacket {
             timestamp_millis: chrono::Utc::now().timestamp_millis() as u64,
         }
     }
-
-    pub fn timestamp_millis(&self) -> u64 {
-        self.timestamp_millis
-    }
 }
 
 /// Represents a packet that is received from a serial port.
 #[derive(Debug, Clone)]
 pub struct IncomingPacket {
     pub line: String,
-    timestamp_millis: u64,
+    pub timestamp_millis: u64,
 }
 
 impl IncomingPacket {
@@ -72,31 +67,6 @@ impl IncomingPacket {
         Self {
             line,
             timestamp_millis: chrono::Utc::now().timestamp_millis() as u64,
-        }
-    }
-
-    pub fn timestamp_millis(&self) -> u64 {
-        self.timestamp_millis
-    }
-}
-
-/// Defines if an open serial port is currently reading or stopped.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ReadState {
-    Read,
-    Stop,
-}
-
-impl ReadState {
-    pub fn is_stop(&self) -> bool {
-        matches!(self, Self::Stop)
-    }
-
-    pub fn toggle(self) -> Self {
-        match self {
-            Self::Read => Self::Stop,
-            Self::Stop => Self::Read,
         }
     }
 }

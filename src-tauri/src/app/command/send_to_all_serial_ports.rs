@@ -1,6 +1,6 @@
 use tokio_util::bytes::Bytes;
 
-use crate::app::state::{
+use crate::core::state::{
     open_serial_port::{OutgoingPacket, PacketOrigin},
     AppState,
 };

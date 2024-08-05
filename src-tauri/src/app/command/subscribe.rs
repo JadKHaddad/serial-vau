@@ -1,4 +1,4 @@
-use crate::app::state::AppState;
+use crate::core::state::AppState;
 
 pub fn subscribe_intern(from: &str, to: &str, _state: &AppState) -> Result<(), SubscribeError> {
     tracing::info!(from=%from, to=%to, "Subscribing");

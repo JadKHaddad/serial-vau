@@ -3,7 +3,7 @@ use std::io::Error as IOError;
 use tokio_serial::Error as TokioSerialError;
 use tokio_util::codec::LinesCodecError;
 
-use crate::serial::AvailablePortsError;
+use crate::core::serial::AvailablePortsError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ManagedSerialPortsError {
