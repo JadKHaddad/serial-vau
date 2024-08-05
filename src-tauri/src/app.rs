@@ -1,7 +1,7 @@
 use anyhow::Context;
 use command::{
     close_serial_port::close_serial_port_intern,
-    open_serial_port::{open_serial_port_intern, OpenSerialPortOptions},
+    open_serial_port::open_serial_port_intern,
     refresh_serial_ports::refresh_serial_ports_intern,
     send_to_all_serial_ports::send_to_all_serial_ports_intern,
     send_to_serial_port::send_to_serial_port_intern,
@@ -9,7 +9,7 @@ use command::{
     toggle_read_state::toggle_read_state_intern,
 };
 use error::AppError;
-use state::AppState;
+use state::{open_serial_port::OpenSerialPortOptions, AppState};
 use tauri::{AppHandle, Manager, State};
 
 use crate::serial::watcher::Watcher as SerialWatcher;
@@ -33,37 +33,7 @@ pub async fn open_serial_port(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let incoming_name = options.name().to_string();
-    let outgoing_name = options.name().to_string();
-
-    let (mut incoming_rx, mut outgoing_tx) = open_serial_port_intern(options, &state).await?;
-
-    tokio::spawn(async move {
-        while let Some(packet) = incoming_rx.recv().await {
-            match packet {
-                Ok(packet) => {
-                    // TODO: Send incoming packet event!
-                }
-                Err(err) => {
-                    tracing::error!(%err, from=%incoming_name, "Error receiving data");
-                }
-            }
-        }
-    });
-
-    tokio::spawn(async move {
-        while let Some(packet) = outgoing_tx.recv().await {
-            match packet {
-                Ok(packet) => {
-                    // TODO: Send outgoing packet event!
-                }
-                Err(err) => {
-                    tracing::error!(%err, to=%outgoing_name, "Error sending data");
-                }
-            }
-        }
-    });
-
+    open_serial_port_intern(options, &app, &state).await?;
     refresh_serial_ports_intern(&app, &state)?;
 
     Ok(())

@@ -7,6 +7,12 @@ use tokio_util::{bytes::Bytes, sync::CancellationToken};
 
 use crate::serial::SerialPort;
 
+#[derive(Debug, Deserialize)]
+pub struct OpenSerialPortOptions {
+    pub name: String,
+    pub initial_read_state: ReadState,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PacketOrigin {
     /// Sent directly to the serial port by he user.

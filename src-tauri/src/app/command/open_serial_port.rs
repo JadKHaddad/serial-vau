@@ -1,297 +1,44 @@
-use std::io::Error as IOError;
+use tauri::AppHandle;
 
-use futures::{SinkExt, StreamExt};
-use serde::Deserialize;
-use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
-use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
-use tokio_util::{
-    bytes::BytesMut,
-    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec, LinesCodecError},
-    sync::CancellationToken,
-};
+use crate::app::state::{open_serial_port::OpenSerialPortOptions, AppState, OpenSerialPortError};
 
-use crate::{
-    app::state::{
-        open_serial_port::{
-            IncomingPacket, OpenSerialPort, OutgoingPacket, PacketOrigin, ReadState,
-        },
-        AppState, ManagedSerialPortsError,
-    },
-    serial::SerialPort,
-};
-
-#[derive(Debug, Deserialize)]
-pub struct OpenSerialPortOptions {
-    name: String,
-    initial_read_state: ReadState,
-}
-
-impl OpenSerialPortOptions {
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum IncomingPacketError {
-    #[error("An IO error occurred: {0}")]
-    IO(
-        #[source]
-        #[from]
-        IOError,
-    ),
-    #[error("Failed to decode incoming packet: {0}")]
-    Codec(
-        #[source]
-        #[from]
-        LinesCodecError,
-    ),
-}
-
-// FIXME: this should be moved to the state module and app::open_serial_port should replace this.
-// look at refresh_serial_ports_intern where the AppHandle is passed to the function.
-// So open the port in state, because state is tauri unaware.
-// This module is tauri aware, so it's ok to use AppHandle here.
 pub async fn open_serial_port_intern(
     options: OpenSerialPortOptions,
+    app: &AppHandle,
     state: &AppState,
-) -> Result<
-    (
-        MPSCUnboundedReceiver<Result<IncomingPacket, IncomingPacketError>>,
-        MPSCUnboundedReceiver<Result<OutgoingPacket, IOError>>,
-    ),
-    OpenSerialPortError,
-> {
+) -> Result<(), OpenSerialPortError> {
     tracing::info!(?options, "Opening serial port");
 
-    let port_to_open_name = state
-        .is_port_closed(&options.name)?
-        .ok_or(OpenSerialPortError::NotFound)?
-        .then_some(&options.name)
-        .ok_or(OpenSerialPortError::AlreadyOpen)?;
+    let incoming_name = options.name.clone();
+    let outgoing_name = options.name.clone();
 
-    let port = tokio_serial::new(port_to_open_name, 115200)
-        .stop_bits(StopBits::One)
-        .data_bits(DataBits::Eight)
-        .flow_control(FlowControl::None)
-        .parity(Parity::None)
-        .open_native_async()?;
-
-    let (port_read, port_write) = tokio::io::split(port);
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<OutgoingPacket>();
-    let (incomig_packet_tx, incomig_packet_rx) =
-        tokio::sync::mpsc::unbounded_channel::<Result<IncomingPacket, IncomingPacketError>>();
-    let (outgoing_packet_tx, outgoing_packet_rx) =
-        tokio::sync::mpsc::unbounded_channel::<Result<OutgoingPacket, IOError>>();
-    let cancellation_token = CancellationToken::new();
-
-    let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
-    let mut framed_write_bytes_port = FramedWrite::new(port_write, BytesCodec::new());
-
-    let (read_state_tx, mut read_state_rx) =
-        tokio::sync::watch::channel(options.initial_read_state);
-
-    state.add_open_serial_port(OpenSerialPort::new(
-        SerialPort::new(options.name.clone()),
-        tx,
-        cancellation_token.clone(),
-        read_state_tx,
-    ));
-
-    #[cfg(feature = "subscriptions")]
-    let subscriptions = state.subscriptions();
-    let read_app_state = state.clone();
-    let read_cancellation_token = cancellation_token.clone();
-    let read_name = options.name.clone();
+    let (mut incoming_rx, mut outgoing_tx) = state.open_serial_port(options).await?;
 
     tokio::spawn(async move {
-        let mut lines_codec = LinesCodec::new();
-        let mut lines_bytes = BytesMut::new();
-
-        // Trigger the initial read state.
-        read_state_rx.mark_changed();
-
-        loop {
-            tracing::debug!(target: "serial_vau::serial::read:.watch", name=%read_name, "Waiting for read state change");
-            tokio::select! {
-                changed_result = read_state_rx.changed() => {
-                    match changed_result {
-                        Ok(_) => {
-                            let read_state = *read_state_rx.borrow();
-                            tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, ?read_state, "Read state changed");
-
-                            if read_state.is_stop() {
-
-                                continue;
-                            }
-
-                            tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Started reading");
-                            loop {
-                                tokio::select! {
-                                    bytes = framed_read_bytes_port.next() => {
-                                        match bytes {
-                                            Some(Ok(bytes)) => {
-                                                tracing::trace!(target: "serial_vau::serial::read::byte", name=%read_name, ?bytes, "Read");
-
-                                                #[cfg(feature = "subscriptions")]
-                                                if let Some(subscriptions) = subscriptions.read().get(&read_name){
-                                                    for (subscriber_name, tx_handle) in subscriptions {
-                                                        if let Some(tx_handle) = tx_handle {
-                                                            tracing::trace!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
-
-                                                            let packet = OutgoingPacket::new_with_current_timestamp(bytes.clone().into(), PacketOrigin::Subscription { from: read_name.clone() });
-
-                                                            if let Err(err) = tx_handle.send(packet) {
-                                                                tracing::error!(target: "serial_vau::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-
-                                                lines_bytes.extend_from_slice(&bytes);
-
-                                                loop {
-                                                    match lines_codec.decode(&mut lines_bytes) {
-                                                        Ok(None) => break,
-                                                        Ok(Some(line)) => {
-                                                            tracing::trace!(target: "serial_vau::serial::read::line", name=%read_name, %line, "Read");
-
-                                                            // Feedback
-                                                            let _ = incomig_packet_tx.send(
-                                                                Ok(IncomingPacket::new_with_current_timestamp(line))
-                                                            );
-
-                                                        }
-                                                        Err(err) => {
-                                                            tracing::warn!(target: "serial_vau::serial::read::line", name=%read_name, %err, "Failed to decode line");
-
-                                                            // Feedback
-                                                            let _ = incomig_packet_tx.send(Err(err.into()));
-
-                                                            // Clear the buffer to prevent further errors.
-                                                            lines_bytes.clear();
-
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            Some(Err(err)) => {
-                                                tracing::error!(target: "serial_vau::serial::read", name=%read_name, %err);
-
-                                                // Feedback
-                                                let _ = incomig_packet_tx.send(Err(err.into()));
-
-                                                // Removing the port will drop the sender causing the write loop to break.
-                                                tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Removing serial port due to an error");
-                                                read_app_state.remove_open_serial_port(&read_name);
-
-                                                break;
-                                            }
-                                            _ => {}
-                                        }
-                                    },
-                                    _ = read_cancellation_token.cancelled() => {
-                                        // At this point we should have been removed and cancelled. Nothing to do here.
-                                        tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Cancelled");
-
-                                        break;
-                                    }
-                                    _ = read_state_rx.changed() => {
-                                        let read_state = *read_state_rx.borrow();
-                                        tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, ?read_state, "Read state changed");
-
-                                        if read_state.is_stop() {
-                                            tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Stopped reading");
-
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Err(_) => {
-                            // Open port was probably removed.
-                            tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, "Read state watch task terminated");
-
-                            break;
-                        }
-                    }
-                },
-                _ = read_cancellation_token.cancelled() => {
-                    tracing::debug!(target: "serial_vau::serial::read::watch", name=%read_name, "Cancelled");
-
-                    break;
+        while let Some(packet) = incoming_rx.recv().await {
+            match packet {
+                Ok(packet) => {
+                    // TODO: Send incoming packet event!
+                }
+                Err(err) => {
+                    tracing::error!(%err, from=%incoming_name, "Error receiving data");
                 }
             }
         }
-
-        tracing::debug!(target: "serial_vau::serial::read", name=%read_name, "Read task terminated")
     });
 
-    let write_name = options.name.clone();
-    let write_cancellation_token = cancellation_token;
-
     tokio::spawn(async move {
-        // Dropping the sender will automatically break the loop.
-        while let Some(packet) = rx.recv().await {
-            tracing::trace!(target: "serial_vau::serial::write::byte", name=%write_name, origin=%packet.origin, data=?packet.data, "Sending");
-            tracing::trace!(target: "serial_vau::serial::write::string", name=%write_name, origin=%packet.origin, data=%String::from_utf8_lossy(&packet.data), "Sending");
-
-            tokio::select! {
-                // Note: Might get stuck here, therefor the cancellation token.
-                send_result = framed_write_bytes_port.send(packet.data.clone()) => {
-                    match send_result {
-                        Ok(_) => {
-                            tracing::trace!(target: "serial_vau::serial::write::result", name=%write_name, origin=%packet.origin, "Ok");
-
-                            // Feedback
-                            let _ = outgoing_packet_tx.send(Ok(packet));
-                        }
-                        Err(err) => {
-                            // If the write fails we just break out of the loop.
-                            // Read task must have also been terminated due to the same error.
-                            tracing::error!(target: "serial_vau::serial::write::result", name=%write_name, origin=?packet.origin, %err);
-
-                            // Feedback
-                            let _ = outgoing_packet_tx.send(Err(err));
-
-                            break;
-                        }
-                    }
-                },
-                _ = write_cancellation_token.cancelled() => {
-                    tracing::debug!(target: "serial_vau::serial::write::result", name=%write_name, "Cancelled");
-
-                    break;
+        while let Some(packet) = outgoing_tx.recv().await {
+            match packet {
+                Ok(packet) => {
+                    // TODO: Send outgoing packet event!
+                }
+                Err(err) => {
+                    tracing::error!(%err, to=%outgoing_name, "Error sending data");
                 }
             }
         }
-
-        tracing::debug!(target: "serial_vau::serial::write", name=%write_name, "Write task terminated")
     });
 
-    Ok((incomig_packet_rx, outgoing_packet_rx))
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum OpenSerialPortError {
-    #[error("Failed to get managed ports: {0}")]
-    ManagedSerialPortsError(
-        #[source]
-        #[from]
-        ManagedSerialPortsError,
-    ),
-    #[error("Port not found")]
-    NotFound,
-    #[error("Port already open")]
-    AlreadyOpen,
-    #[error("Failed to open port: {0}")]
-    FailedToOpen(
-        #[source]
-        #[from]
-        tokio_serial::Error,
-    ),
+    Ok(())
 }
