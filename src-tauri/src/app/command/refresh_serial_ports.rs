@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    app::{error::AppError, event::managed_serial_ports::ManagedSerialPorts},
+    app::{error::AppError, event::managed_serial_ports::ManagedSerialPortsEvent},
     core::state::AppState,
 };
 
@@ -12,7 +12,7 @@ pub fn refresh_serial_ports_intern(app: &AppHandle, state: &AppState) -> Result<
 
     tracing::debug!(?managed_serial_ports);
 
-    let managed_serial_ports_event = ManagedSerialPorts {
+    let managed_serial_ports_event = ManagedSerialPortsEvent {
         ports: managed_serial_ports.into_iter().map(Into::into).collect(),
     };
 
