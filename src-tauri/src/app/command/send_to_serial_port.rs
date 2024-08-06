@@ -12,7 +12,10 @@ pub fn send_to_serial_port_intern(
 ) -> Result<(), SendToSerialPortError> {
     tracing::info!(name=%name, "Sending to serial port");
 
-    let packet = OutgoingPacket::new_with_current_timestamp(data, PacketOrigin::Direct);
+    let packet = OutgoingPacket {
+        data,
+        packet_origin: PacketOrigin::Direct,
+    };
 
     Ok(state
         .send_to_open_serial_port(&name, packet)

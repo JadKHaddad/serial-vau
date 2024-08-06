@@ -16,6 +16,14 @@ pub enum ManagedSerialPortsError {
 }
 
 #[derive(Debug, thiserror::Error)]
+pub enum PacketError {
+    #[error(transparent)]
+    Incoming(#[from] IncomingPacketError),
+    #[error(transparent)]
+    Outgoing(#[from] OutgoingPacketError),
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum IncomingPacketError {
     #[error("An IO error occurred: {0}")]
     IO(
@@ -28,6 +36,16 @@ pub enum IncomingPacketError {
         #[source]
         #[from]
         LinesCodecError,
+    ),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum OutgoingPacketError {
+    #[error("An IO error occurred: {0}")]
+    IO(
+        #[source]
+        #[from]
+        IOError,
     ),
 }
 

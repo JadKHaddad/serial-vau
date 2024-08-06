@@ -14,6 +14,19 @@ pub struct OpenSerialPortOptions {
     pub initial_read_state: ReadState,
 }
 
+/// Represents a packet that is received from a serial port.
+#[derive(Debug, Clone)]
+pub struct IncomingPacket {
+    pub line: String,
+}
+
+#[cfg(feature = "subscriptions")]
+#[derive(Debug, Clone)]
+pub struct SubscriptionPacketOrigin {
+    /// The name of the serial port that sent the packet.
+    pub name: String,
+}
+
 #[derive(Debug, Clone)]
 pub enum PacketOrigin {
     /// Sent directly to the serial port by he user.
@@ -22,7 +35,7 @@ pub enum PacketOrigin {
     Broadcast,
     /// Sent via a subscription from another serial port.
     #[cfg(feature = "subscriptions")]
-    Subscription { from: String },
+    Subscription(SubscriptionPacketOrigin),
 }
 
 /// Usefull for tracing.
@@ -32,7 +45,9 @@ impl std::fmt::Display for PacketOrigin {
             Self::Direct => write!(f, "Direct"),
             Self::Broadcast => write!(f, "Broadcast"),
             #[cfg(feature = "subscriptions")]
-            Self::Subscription { from } => write!(f, "Subscription from: [{}]", from),
+            Self::Subscription(subscription) => {
+                write!(f, "Subscription from: [{}]", subscription.name)
+            }
         }
     }
 }
@@ -41,31 +56,32 @@ impl std::fmt::Display for PacketOrigin {
 #[derive(Debug, Clone)]
 pub struct OutgoingPacket {
     pub data: Bytes,
-    pub origin: PacketOrigin,
-    pub timestamp_millis: u64,
+    pub packet_origin: PacketOrigin,
 }
 
-impl OutgoingPacket {
-    pub fn new_with_current_timestamp(data: Bytes, origin: PacketOrigin) -> Self {
-        Self {
-            data,
-            origin,
-            timestamp_millis: chrono::Utc::now().timestamp_millis() as u64,
-        }
-    }
-}
-
-/// Represents a packet that is received from a serial port.
 #[derive(Debug, Clone)]
-pub struct IncomingPacket {
-    pub line: String,
+pub enum PacketDirection {
+    /// From the open serial port to the application
+    Incoming(IncomingPacket),
+    /// From the application to the open serial port
+    Outgoing(OutgoingPacket),
+}
+
+#[derive(Debug, Clone)]
+pub struct Packet {
+    pub packet_direction: PacketDirection,
+    pub port_name: String,
     pub timestamp_millis: u64,
 }
 
-impl IncomingPacket {
-    pub fn new_with_current_timestamp(line: String) -> Self {
+impl Packet {
+    pub fn new_with_current_timestamp(
+        packet_direction: PacketDirection,
+        port_name: String,
+    ) -> Self {
         Self {
-            line,
+            packet_direction,
+            port_name,
             timestamp_millis: chrono::Utc::now().timestamp_millis() as u64,
         }
     }

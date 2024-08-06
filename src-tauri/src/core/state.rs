@@ -1,11 +1,12 @@
-use std::{collections::HashMap, io::Error as IOError, ops::Deref, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use error::{IncomingPacketError, ManagedSerialPortsError, OpenSerialPortError};
+use error::{ManagedSerialPortsError, OpenSerialPortError, PacketError};
 use futures::{SinkExt, StreamExt};
 #[cfg(feature = "subscriptions")]
 use open_serial_port::TxHandle;
 use open_serial_port::{
-    IncomingPacket, OpenSerialPort, OpenSerialPortOptions, OutgoingPacket, PacketOrigin, SendError,
+    IncomingPacket, OpenSerialPort, OpenSerialPortOptions, OutgoingPacket, Packet, PacketDirection,
+    PacketOrigin, SendError, SubscriptionPacketOrigin,
 };
 use parking_lot::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
@@ -267,13 +268,7 @@ impl AppState {
     pub async fn open_serial_port(
         &self,
         options: OpenSerialPortOptions,
-    ) -> Result<
-        (
-            MPSCUnboundedReceiver<Result<IncomingPacket, IncomingPacketError>>,
-            MPSCUnboundedReceiver<Result<OutgoingPacket, IOError>>,
-        ),
-        OpenSerialPortError,
-    > {
+    ) -> Result<MPSCUnboundedReceiver<Result<Packet, PacketError>>, OpenSerialPortError> {
         tracing::debug!(?options, "Opening serial port");
 
         let port_to_open_name = self
@@ -291,10 +286,10 @@ impl AppState {
 
         let (port_read, port_write) = tokio::io::split(port);
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<OutgoingPacket>();
-        let (incomig_packet_tx, incomig_packet_rx) =
-            tokio::sync::mpsc::unbounded_channel::<Result<IncomingPacket, IncomingPacketError>>();
-        let (outgoing_packet_tx, outgoing_packet_rx) =
-            tokio::sync::mpsc::unbounded_channel::<Result<OutgoingPacket, IOError>>();
+
+        let (packet_tx, packet_rx) =
+            tokio::sync::mpsc::unbounded_channel::<Result<Packet, PacketError>>();
+
         let cancellation_token = CancellationToken::new();
 
         let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
@@ -315,6 +310,7 @@ impl AppState {
         let read_app_state = self.clone();
         let read_cancellation_token = cancellation_token.clone();
         let read_name = options.name.clone();
+        let read_packet_tx = packet_tx.clone();
 
         tokio::spawn(async move {
             let mut lines_codec = LinesCodec::new();
@@ -351,9 +347,12 @@ impl AppState {
                                                             if let Some(tx_handle) = tx_handle {
                                                                 tracing::trace!(target: "serial_core::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
 
-                                                                let packet = OutgoingPacket::new_with_current_timestamp(bytes.clone().into(), PacketOrigin::Subscription { from: read_name.clone() });
+                                                                let outgoing_packet = OutgoingPacket {
+                                                                    data: bytes.clone().into(),
+                                                                    packet_origin: PacketOrigin::Subscription(SubscriptionPacketOrigin{ name: read_name.clone() }),
+                                                                };
 
-                                                                if let Err(err) = tx_handle.send(packet) {
+                                                                if let Err(err) = tx_handle.send(outgoing_packet) {
                                                                     tracing::error!(target: "serial_core::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, %err, "Failed to send bytes to subscriber");
                                                                 }
                                                             }
@@ -369,9 +368,18 @@ impl AppState {
                                                             Ok(Some(line)) => {
                                                                 tracing::trace!(target: "serial_core::serial::read::line", name=%read_name, %line, "Read");
 
+                                                                let packet = Packet::new_with_current_timestamp(
+                                                                    PacketDirection::Incoming(
+                                                                        IncomingPacket {
+                                                                            line,
+                                                                        }
+                                                                    ),
+                                                                    read_name.clone(),
+                                                                );
+
                                                                 // Feedback
-                                                                let _ = incomig_packet_tx.send(
-                                                                    Ok(IncomingPacket::new_with_current_timestamp(line))
+                                                                let _ = read_packet_tx.send(
+                                                                    Ok(packet)
                                                                 );
 
                                                             }
@@ -379,7 +387,7 @@ impl AppState {
                                                                 tracing::warn!(target: "serial_core::serial::read::line", name=%read_name, %err, "Failed to decode line");
 
                                                                 // Feedback
-                                                                let _ = incomig_packet_tx.send(Err(err.into()));
+                                                                let _ = read_packet_tx.send(Err(PacketError::Incoming(err.into())));
 
                                                                 // Clear the buffer to prevent further errors.
                                                                 lines_bytes.clear();
@@ -393,7 +401,7 @@ impl AppState {
                                                     tracing::error!(target: "serial_core::serial::read", name=%read_name, %err);
 
                                                     // Feedback
-                                                    let _ = incomig_packet_tx.send(Err(err.into()));
+                                                    let _ = read_packet_tx.send(Err(PacketError::Incoming(err.into())));
 
                                                     // Removing the port will drop the sender causing the write loop to break.
                                                     tracing::debug!(target: "serial_core::serial::read", name=%read_name, "Removing serial port due to an error");
@@ -445,30 +453,41 @@ impl AppState {
 
         let write_name = options.name.clone();
         let write_cancellation_token = cancellation_token;
+        let write_packet_tx = packet_tx.clone();
 
         tokio::spawn(async move {
             // Dropping the sender will automatically break the loop.
             while let Some(packet) = rx.recv().await {
-                tracing::trace!(target: "serial_core::serial::write::byte", name=%write_name, origin=%packet.origin, data=?packet.data, "Sending");
-                tracing::trace!(target: "serial_core::serial::write::string", name=%write_name, origin=%packet.origin, data=%String::from_utf8_lossy(&packet.data), "Sending");
+                tracing::trace!(target: "serial_core::serial::write::byte", name=%write_name, origin=%packet.packet_origin, data=?packet.data, "Sending");
+                tracing::trace!(target: "serial_core::serial::write::string", name=%write_name, origin=%packet.packet_origin, data=%String::from_utf8_lossy(&packet.data), "Sending");
 
                 tokio::select! {
                     // Note: Might get stuck here, therefor the cancellation token.
                     send_result = framed_write_bytes_port.send(packet.data.clone()) => {
                         match send_result {
                             Ok(_) => {
-                                tracing::trace!(target: "serial_core::serial::write::result", name=%write_name, origin=%packet.origin, "Ok");
+                                tracing::trace!(target: "serial_core::serial::write::result", name=%write_name, origin=%packet.packet_origin, "Ok");
+
+                                let packet = Packet::new_with_current_timestamp(
+                                    PacketDirection::Outgoing(
+                                        OutgoingPacket {
+                                            packet_origin: packet.packet_origin,
+                                            data: packet.data,
+                                        }
+                                    ),
+                                    write_name.clone(),
+                                );
 
                                 // Feedback
-                                let _ = outgoing_packet_tx.send(Ok(packet));
+                                let _ = write_packet_tx.send(Ok(packet));
                             }
                             Err(err) => {
                                 // If the write fails we just break out of the loop.
                                 // Read task must have also been terminated due to the same error.
-                                tracing::error!(target: "serial_core::serial::write::result", name=%write_name, origin=?packet.origin, %err);
+                                tracing::error!(target: "serial_core::serial::write::result", name=%write_name, origin=?packet.packet_origin, %err);
 
                                 // Feedback
-                                let _ = outgoing_packet_tx.send(Err(err));
+                                let _ = write_packet_tx.send(Err(PacketError::Outgoing(err.into())));
 
                                 break;
                             }
@@ -485,6 +504,6 @@ impl AppState {
             tracing::debug!(target: "serial_core::serial::write", name=%write_name, "Write task terminated")
         });
 
-        Ok((incomig_packet_rx, outgoing_packet_rx))
+        Ok(packet_rx)
     }
 }

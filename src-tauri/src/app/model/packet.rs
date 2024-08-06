@@ -48,16 +48,58 @@ pub struct Packet {
 
 mod core_impl {
     use super::*;
-    use crate::core::state::open_serial_port::PacketOrigin as CorePacketOrigin;
+    use crate::core::state::open_serial_port::{
+        IncomingPacket as CoreIncomingPacket, OutgoingPacket as CoreOutgoingPacket,
+        Packet as CorePacket, PacketDirection as CorePacketDirection,
+        PacketOrigin as CorePacketOrigin, SubscriptionPacketOrigin as CoreSubscriptionPacketOrigin,
+    };
+
+    impl From<CoreIncomingPacket> for IncomingPacket {
+        fn from(value: CoreIncomingPacket) -> Self {
+            Self { line: value.line }
+        }
+    }
+
+    impl From<CoreSubscriptionPacketOrigin> for SubscriptionPacketOrigin {
+        fn from(value: CoreSubscriptionPacketOrigin) -> Self {
+            Self { name: value.name }
+        }
+    }
 
     impl From<CorePacketOrigin> for PacketOrigin {
         fn from(value: CorePacketOrigin) -> Self {
             match value {
                 CorePacketOrigin::Direct => Self::Direct,
                 CorePacketOrigin::Broadcast => Self::Broadcast,
-                CorePacketOrigin::Subscription { from } => {
-                    Self::Subscription(SubscriptionPacketOrigin { name: from })
-                }
+                CorePacketOrigin::Subscription(origin) => Self::Subscription(origin.into()),
+            }
+        }
+    }
+
+    impl From<CoreOutgoingPacket> for OutgoingPacket {
+        fn from(value: CoreOutgoingPacket) -> Self {
+            Self {
+                packet_origin: value.packet_origin.into(),
+                data: value.data.to_vec(),
+            }
+        }
+    }
+
+    impl From<CorePacketDirection> for PacketDirection {
+        fn from(value: CorePacketDirection) -> Self {
+            match value {
+                CorePacketDirection::Incoming(packet) => Self::Incoming(packet.into()),
+                CorePacketDirection::Outgoing(packet) => Self::Outgoing(packet.into()),
+            }
+        }
+    }
+
+    impl From<CorePacket> for Packet {
+        fn from(value: CorePacket) -> Self {
+            Self {
+                packet_direction: value.packet_direction.into(),
+                port_name: value.port_name,
+                timestamp_millis: value.timestamp_millis,
             }
         }
     }
