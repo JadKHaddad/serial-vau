@@ -13,8 +13,8 @@ export enum PacketOriginType {
 }
 
 export type PacketOrigin =
-    | { type: PacketOriginType.Direct, content: null }
-    | { type: PacketOriginType.Broadcast, content: null }
+    | { type: PacketOriginType.Direct }
+    | { type: PacketOriginType.Broadcast }
     | { type: PacketOriginType.Subscription; content: SubscriptionPacketOrigin };
 
 
