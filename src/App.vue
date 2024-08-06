@@ -12,9 +12,9 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { useTheme } from 'vuetify'
 import { useAppStore } from './stores/app';
 import { invoke } from '@tauri-apps/api';
-import { ManagedSerialPorts } from './events/managed-serial-ports';
-import { IncomigPacket } from './models/models';
-import { PacketData } from './models/intern';
+import { ManagedSerialPortsEvent } from './events/managed-serial-ports';
+import { PacketEvent } from './events/packet';
+import { PacketDirectionType, PacketOriginType } from './models/packet';
 
 const theme = useTheme()
 const app = useAppStore()
@@ -32,18 +32,47 @@ onMounted(async () => {
   });
 
   unlistenSerialPortsEvent = await listen('serial_ports_event', (event) => {
-    const managedSerialPortsEvent = event.payload as ManagedSerialPorts;
+    const managedSerialPortsEvent = event.payload as ManagedSerialPortsEvent;
     app.managedSerialPorts = managedSerialPortsEvent.ports;
   });
 
-  unlistenSerialLineEvent = await listen('serial_line_event', (event) => {
-    const incomingPacket = event.payload as IncomigPacket;
-    const packetData: PacketData = {
-      line: incomingPacket.line,
-      timestampMillis: incomingPacket.timestampMillis
-    };
+  unlistenSerialLineEvent = await listen('serial_packet_event', (event) => {
+    const packetEvent = event.payload as PacketEvent;
+    const packet = packetEvent.packet;
 
-    app.addPacket(incomingPacket.from, packetData);
+    console.log(packet);
+
+    if (packet.packetDirection.type === PacketDirectionType.Outgoing) {
+      console.log('Is outgoing packet');
+      const origin = packet.packetDirection.content.packetOrigin;
+      console.log('Origin: ' + origin.type);
+      if (origin.type == PacketOriginType.Direct) {
+        console.log('Outgoing direct packet');
+      }
+
+      else if (origin.type == PacketOriginType.Broadcast) {
+        console.log('Outgoing broadcast packet');
+      }
+
+      else if (origin.type == PacketOriginType.Subscription) {
+        const from = origin.content.name;
+
+        console.log('Outgoing subscription packet from: ' + from);
+      }
+      else {
+        console.log('Unknown outgoing packet origin');
+      }
+
+    } else {
+      console.log('Is not outgoing packet: ' + packet.packetDirection.type);
+    }
+
+    // const packetData: PacketData = {
+    //   line: incomingPacket.line,
+    //   timestampMillis: incomingPacket.timestampMillis
+    // };
+
+    // app.addPacket(incomingPacket.from, packetData);
   });
 
   refreshSerialPorts();

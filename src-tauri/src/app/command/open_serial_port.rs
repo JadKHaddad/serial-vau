@@ -2,8 +2,11 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     app::{
-        event::incoming_packet::IncomingPacket as IncomingPacketEvent,
-        model::{incoming_packet::IncomingPacket, open_options::OpenSerialPortOptions},
+        event::packet::PacketEvent,
+        model::{
+            open_options::OpenSerialPortOptions,
+            packet::{IncomingPacket, OutgoingPacket, Packet, PacketDirection},
+        },
     },
     core::state::{error::OpenSerialPortError, AppState},
 };
@@ -25,15 +28,18 @@ pub async fn open_serial_port_intern(
         while let Some(packet) = incoming_rx.recv().await {
             match packet {
                 Ok(packet) => {
-                    let incoming_packet_event = IncomingPacketEvent {
-                        incoming_packet: IncomingPacket {
-                            from: incoming_name.clone(),
+                    // TODO: consider implementing from core data types to model/packet data types
+                    let event = PacketEvent {
+                        packet: Packet {
+                            packet_direction: PacketDirection::Incoming(IncomingPacket {
+                                line: packet.line,
+                            }),
+                            port_name: incoming_name.clone(),
                             timestamp_millis: packet.timestamp_millis,
-                            line: packet.line,
                         },
                     };
 
-                    let _ = app_handle_read.emit_all("serial_line_event", &incoming_packet_event);
+                    let _ = app_handle_read.emit_all("serial_packet_event", &event);
                 }
                 Err(err) => {
                     tracing::error!(%err, from=%incoming_name, "Error receiving data");
@@ -42,11 +48,24 @@ pub async fn open_serial_port_intern(
         }
     });
 
+    let app_handle_write = app.clone();
     tokio::spawn(async move {
         while let Some(packet) = outgoing_tx.recv().await {
             match packet {
                 Ok(packet) => {
-                    // TODO: Send outgoing packet event!
+                    // TODO: consider implementing from core data types to model/packet data types
+                    let event = PacketEvent {
+                        packet: Packet {
+                            packet_direction: PacketDirection::Outgoing(OutgoingPacket {
+                                packet_origin: packet.origin.into(),
+                                data: packet.data.to_vec(),
+                            }),
+                            port_name: outgoing_name.clone(),
+                            timestamp_millis: packet.timestamp_millis,
+                        },
+                    };
+
+                    let _ = app_handle_write.emit_all("serial_packet_event", &event);
                 }
                 Err(err) => {
                     tracing::error!(%err, to=%outgoing_name, "Error sending data");

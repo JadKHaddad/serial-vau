@@ -1,13 +1,14 @@
 <template>
-    <v-container>
-        <!-- Tabs for Serial Ports -->
+    <!-- 
+     <v-container>
+       
         <v-tabs v-model="selectedPort" background-color="primary" dark>
             <v-tab v-for="(packetData, portName) in app.packetDictionary" :key="portName">
                 {{ portName }}
             </v-tab>
         </v-tabs>
 
-        <!-- Tab Content -->
+
         <v-tabs-items v-model="selectedPort">
             <v-tab-item v-for="(packetData, portName) in app.packetDictionary" :key="portName">
                 <v-list>
@@ -26,19 +27,20 @@
                 </v-list>
             </v-tab-item>
         </v-tabs-items>
-    </v-container>
+    </v-container> 
+    -->
 </template>
 
 <script lang="ts" setup>
-import { useAppStore } from '@/stores/app';
-// TODO: we need a direction of the incoming packet. 
-// we need to have access to the managed serial ports to display if its open or not and display other stats
-// no write access required because we use tauri events. ewe call tauri functions from here if we want then we get an evnet in the app
-const app = useAppStore()
-const selectedPort = ref<string>('');
-const portNames = computed(() => Object.keys(app.packetDictionary));
-if (portNames.value.length > 0) {
-    selectedPort.value = portNames.value[0];
-}
+// import { useAppStore } from '@/stores/app';
+// // TODO: we need a direction of the incoming packet. 
+// // we need to have access to the managed serial ports to display if its open or not and display other stats
+// // no write access required because we use tauri events. ewe call tauri functions from here if we want then we get an evnet in the app
+// const app = useAppStore()
+// const selectedPort = ref<string>('');
+// const portNames = computed(() => Object.keys(app.packetDictionary));
+// if (portNames.value.length > 0) {
+//     selectedPort.value = portNames.value[0];
+// }
 
 </script>

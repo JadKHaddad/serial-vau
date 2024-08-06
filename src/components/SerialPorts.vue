@@ -76,8 +76,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api';
-import { OpenSerialPortOptions, StatusType, ReadState } from '@/models/models';
+import { StatusType, ReadState } from '@/models/managed-serial-port';
 import { useAppStore } from '@/stores/app';
+import { OpenSerialPortOptions } from '@/models/open-options';
 
 
 const app = useAppStore()

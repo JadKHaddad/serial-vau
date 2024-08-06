@@ -1,5 +1,6 @@
-import { ManagedSerialPort } from "@/models/models";
+import { ManagedSerialPort } from "@/models/managed-serial-port";
 
-export interface ManagedSerialPorts {
+
+export interface ManagedSerialPortsEvent {
     ports: ManagedSerialPort[];
 }

@@ -24,11 +24,6 @@ export interface ManagedSerialPort {
     readState?: ReadState;
 }
 
-export interface OpenSerialPortOptions {
-    name: string;
-    initialReadState: ReadState;
-}
-
 export interface IncomigPacket {
     from: string,
     line: string,
