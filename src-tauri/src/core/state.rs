@@ -16,7 +16,7 @@ use tokio_util::{
     sync::CancellationToken,
 };
 
-use super::serial::SerialPort;
+use super::serial::{managed_serial_port::OpenStatus, SerialPort};
 
 use super::serial::managed_serial_port::{ManagedSerialPort, Status};
 
@@ -103,7 +103,9 @@ impl AppStateInner {
                 };
 
                 if let Some(open_serial_port) = open_serial_ports.get(port.name()) {
-                    managed_serial_port.status = Status::Open(open_serial_port.read_state());
+                    managed_serial_port.status = Status::Open(OpenStatus {
+                        read_state: open_serial_port.read_state(),
+                    });
                 }
 
                 managed_serial_port

@@ -1,14 +1,19 @@
-#[derive(Debug)]
-pub enum Status {
-    Closed,
-    Open(ReadState),
-}
-
 /// Defines if an open serial port is currently reading or stopped.
 #[derive(Debug, Clone, Copy)]
 pub enum ReadState {
     Read,
     Stop,
+}
+
+#[derive(Debug)]
+pub struct OpenStatus {
+    pub read_state: ReadState,
+}
+
+#[derive(Debug)]
+pub enum Status {
+    Closed,
+    Open(OpenStatus),
 }
 
 impl ReadState {

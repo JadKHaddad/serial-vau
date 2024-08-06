@@ -35,8 +35,25 @@ pub struct ManagedSerialPort {
 mod core_impl {
     use super::*;
     use crate::core::serial::managed_serial_port::ManagedSerialPort as CoreManagedSerialPort;
+    use crate::core::serial::managed_serial_port::OpenStatus as CoreOpenStatus;
     use crate::core::serial::managed_serial_port::ReadState as CoreReadState;
     use crate::core::serial::managed_serial_port::Status as CoreStatus;
+
+    impl From<CoreOpenStatus> for OpenStatus {
+        fn from(value: CoreOpenStatus) -> Self {
+            Self {
+                read_state: value.read_state.into(),
+            }
+        }
+    }
+
+    impl From<OpenStatus> for CoreOpenStatus {
+        fn from(value: OpenStatus) -> Self {
+            Self {
+                read_state: value.read_state.into(),
+            }
+        }
+    }
 
     impl From<CoreReadState> for ReadState {
         fn from(value: CoreReadState) -> Self {
@@ -60,9 +77,7 @@ mod core_impl {
         fn from(value: CoreStatus) -> Self {
             match value {
                 CoreStatus::Closed => Self::Closed,
-                CoreStatus::Open(read_state) => Self::Open(OpenStatus {
-                    read_state: read_state.into(),
-                }),
+                CoreStatus::Open(open_status) => Self::Open(open_status.into()),
             }
         }
     }
@@ -71,7 +86,7 @@ mod core_impl {
         fn from(value: Status) -> Self {
             match value {
                 Status::Closed => Self::Closed,
-                Status::Open(OpenStatus { read_state }) => Self::Open(read_state.into()),
+                Status::Open(open_status) => Self::Open(open_status.into()),
             }
         }
     }
