@@ -13,6 +13,8 @@ import { useTheme } from 'vuetify'
 import { useAppStore } from './stores/app';
 import { invoke } from '@tauri-apps/api';
 import { ManagedSerialPorts } from './events/managed-serial-ports';
+import { IncomigPacket } from './models/models';
+import { PacketData } from './models/intern';
 
 const theme = useTheme()
 const app = useAppStore()
@@ -35,7 +37,13 @@ onMounted(async () => {
   });
 
   unlistenSerialLineEvent = await listen('serial_line_event', (event) => {
-    console.log(event.payload);
+    const incomingPacket = event.payload as IncomigPacket;
+    const packetData: PacketData = {
+      line: incomingPacket.line,
+      timestampMillis: incomingPacket.timestampMillis
+    };
+
+    app.addPacket(incomingPacket.from, packetData);
   });
 
   refreshSerialPorts();
