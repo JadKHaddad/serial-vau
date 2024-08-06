@@ -8,7 +8,7 @@
                 <v-icon :color="port.status.type === StatusType.Open ? 'green' : 'red'" :size="16">
                     {{ port.status.type === StatusType.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
                 </v-icon>
-                <v-icon v-if="port.status.content?.readState"
+                <v-icon v-if="port.status.type === StatusType.Open && port.status.content.readState"
                     :color="port.status.content?.readState === ReadState.Read ? 'green' : 'red'" :size="16"
                     class="ml-2">
                     {{ port.readState === ReadState.Read ? 'mdi-play-circle-outline' :
