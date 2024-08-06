@@ -5,10 +5,11 @@
                 <v-col cols="auto">
                     <v-list-item-title>{{ port.name }}</v-list-item-title>
                 </v-col>
-                <v-icon :color="port.status === Status.Open ? 'green' : 'red'" :size="16">
-                    {{ port.status === Status.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                <v-icon :color="port.status.type === StatusType.Open ? 'green' : 'red'" :size="16">
+                    {{ port.status.type === StatusType.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
                 </v-icon>
-                <v-icon v-if="port.readState" :color="port.readState === ReadState.Read ? 'green' : 'red'" :size="16"
+                <v-icon v-if="port.status.content?.readState"
+                    :color="port.status.content?.readState === ReadState.Read ? 'green' : 'red'" :size="16"
                     class="ml-2">
                     {{ port.readState === ReadState.Read ? 'mdi-play-circle-outline' :
                         'mdi-stop-circle-outline' }}
@@ -57,7 +58,7 @@
                 </v-btn>
             </v-list-item-action>
 
-            <v-text-field v-if="port.status === Status.Open" v-model="portValues[index]" label="Send value"
+            <v-text-field v-if="port.status.type === StatusType.Open" v-model="portValues[index]" label="Send value"
                 :append-icon="portValues[index] ? 'mdi-send' : ''"
                 @click:append="sendToSerialPortAncClearValue(port.name, portValues[index])" clearable
                 @click:clear="clearSerialPortValue(port.name)"></v-text-field>
@@ -75,7 +76,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api';
-import { OpenSerialPortOptions, Status, ReadState } from '@/models/models';
+import { OpenSerialPortOptions, StatusType, ReadState } from '@/models/models';
 import { useAppStore } from '@/stores/app';
 
 

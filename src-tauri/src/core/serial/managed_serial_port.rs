@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub enum Status {
     Closed,
-    Open,
+    Open(ReadState),
 }
 
 /// Defines if an open serial port is currently reading or stopped.
@@ -32,12 +32,11 @@ pub struct ManagedSerialPort {
     pub subscriptions: Vec<String>,
     #[cfg(feature = "subscriptions")]
     pub subscribed_to: Vec<String>,
-    pub read_state: Option<ReadState>,
 }
 
 impl ManagedSerialPort {
     pub fn is_open(&self) -> bool {
-        matches!(self.status, Status::Open)
+        matches!(self.status, Status::Open(_))
     }
 
     pub fn is_closed(&self) -> bool {

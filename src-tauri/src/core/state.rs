@@ -100,12 +100,10 @@ impl AppStateInner {
                     subscriptions,
                     #[cfg(feature = "subscriptions")]
                     subscribed_to,
-                    read_state: None,
                 };
 
                 if let Some(open_serial_port) = open_serial_ports.get(port.name()) {
-                    managed_serial_port.status = Status::Open;
-                    managed_serial_port.read_state = Some(open_serial_port.read_state());
+                    managed_serial_port.status = Status::Open(open_serial_port.read_state());
                 }
 
                 managed_serial_port

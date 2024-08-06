@@ -1,4 +1,12 @@
-export enum Status {
+export type Status =
+    | { type: StatusType.Closed; content: null }
+    | { type: StatusType.Open; content: OpenStatus };
+
+export interface OpenStatus {
+    readState: ReadState;
+}
+
+export enum StatusType {
     Closed = "closed",
     Open = "open",
 }

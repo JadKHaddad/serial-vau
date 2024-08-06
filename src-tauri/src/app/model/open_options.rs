@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::read_state::ReadState;
+use super::managed_serial_port::ReadState;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
