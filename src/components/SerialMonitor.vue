@@ -19,6 +19,7 @@
                         <v-list-item-title>{{ packetTitle(packet) }}</v-list-item-title>
                         <v-list-item-subtitle>{{ new Date(packet.timestampMillis).toLocaleString()
                             }}</v-list-item-subtitle>
+                        <v-divider class="mb-1 mt-3"></v-divider>
                     </v-list-item>
                 </v-list>
 
