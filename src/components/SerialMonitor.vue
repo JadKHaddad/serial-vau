@@ -5,31 +5,34 @@
                 {{ portName }}
             </v-tab>
         </v-tabs>
-
         <v-tabs-window v-model="selectedPortIndex">
             <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
-                <v-text-field v-if="selectedPort?.status.type === StatusType.Open"
-                    v-model="portValues[selectedPort.name]" label="Send value"
-                    :append-icon="portValues[selectedPort.name] ? 'mdi-send' : ''"
-                    @click:append="sendToSerialPortAndClearValue(selectedPort.name, portValues[selectedPort.name])"
-                    clearable @click:clear="clearSerialPortValue(selectedPort.name)"></v-text-field>
+                <v-card class="d-flex flex-column" style="height: 85vh;"> <!-- FIXME: I don't like this -->
+                    <v-card-text class="flex-grow-1 overflow-y-auto">
+                        <v-list v-if="app.packets[portName]?.length">
+                            <v-list-item v-for="(packet, index) in app.packets[portName]" :key="index">
+                                <v-list-item-title>{{ packetTitle(packet) }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ new Date(packet.timestampMillis).toLocaleString()
+                                    }}</v-list-item-subtitle>
+                                <v-divider class="mb-1 mt-3"></v-divider>
+                            </v-list-item>
+                        </v-list>
+                    </v-card-text>
 
-                <v-list v-if="app.packets[portName]?.length">
-                    <v-list-item v-for="(packet, index) in app.packets[portName]" :key="index">
-                        <v-list-item-title>{{ packetTitle(packet) }}</v-list-item-title>
-                        <v-list-item-subtitle>{{ new Date(packet.timestampMillis).toLocaleString()
-                            }}</v-list-item-subtitle>
-                        <v-divider class="mb-1 mt-3"></v-divider>
-                    </v-list-item>
-                </v-list>
-
+                    <v-card-actions v-if="selectedPort?.status.type === StatusType.Open">
+                        <v-text-field v-model="portValues[selectedPort.name]" label="Send value"
+                            :append-icon="portValues[selectedPort.name] ? 'mdi-send' : ''"
+                            @click:append="sendToSerialPortAndClearValue(selectedPort.name, portValues[selectedPort.name])"
+                            clearable @click:clear="clearSerialPortValue(selectedPort.name)"></v-text-field>
+                    </v-card-actions>
+                </v-card>
             </v-tabs-window-item>
         </v-tabs-window>
     </v-container>
 </template>
 
-
 <script lang="ts" setup>
+// TODO: auto scroll
 import { ref, computed } from 'vue';
 import { PacketData } from '@/models/intern/packet-data';
 import { PacketDirectionType, PacketOriginType } from '@/models/packet';
