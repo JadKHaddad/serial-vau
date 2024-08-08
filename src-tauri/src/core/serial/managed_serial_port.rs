@@ -5,11 +5,13 @@ pub enum ReadState {
     Stop,
 }
 
+/// Defines additional information if the port is in [`Status::Open`] state.
 #[derive(Debug)]
 pub struct OpenStatus {
     pub read_state: ReadState,
 }
 
+/// Status of a serial port.
 #[derive(Debug)]
 pub enum Status {
     Closed,

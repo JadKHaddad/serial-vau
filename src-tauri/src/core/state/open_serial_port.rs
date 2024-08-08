@@ -8,16 +8,20 @@ use crate::core::serial::managed_serial_port::ReadState;
 
 use super::SerialPort;
 
+/// Describes how a given serial port should be open.
 #[derive(Debug)]
 pub struct OpenSerialPortOptions {
+    /// Name of the serial port.
     pub name: String,
+    /// Defines the [`ReadState`] of a serial port before it is even open.
     pub initial_read_state: ReadState,
+    // TODO: Other fields: BaudRate ...
 }
 
 /// Represents a packet that is received from a serial port.
 #[derive(Debug, Clone)]
 pub struct IncomingPacket {
-    pub line: String,
+    pub line: String, // TODO: Maybe use just bytes that represet a line. (Without new line char)
 }
 
 #[cfg(feature = "subscriptions")]
@@ -27,6 +31,7 @@ pub struct SubscriptionPacketOrigin {
     pub name: String,
 }
 
+/// Origin of an [`OutgoingPacket`].
 #[derive(Debug, Clone)]
 pub enum PacketOrigin {
     /// Sent directly to the serial port by he user.
@@ -55,21 +60,25 @@ impl std::fmt::Display for PacketOrigin {
 /// Represents a packet that is sent to a serial port.
 #[derive(Debug, Clone)]
 pub struct OutgoingPacket {
+    /// Bytes sent.
     pub bytes: Bytes,
+    /// Origin of an [`OutgoingPacket`].
     pub packet_origin: PacketOrigin,
 }
 
 #[derive(Debug, Clone)]
 pub enum PacketDirection {
-    /// From the open serial port to the application
+    /// From the open serial port to the application.
     Incoming(IncomingPacket),
-    /// From the application to the open serial port
+    /// From the application to the open serial port.
     Outgoing(OutgoingPacket),
 }
 
+/// Packet emitted by [`AppState::open_serial_port`](crate::core::state::AppState::open_serial_port) through the channel.
 #[derive(Debug, Clone)]
 pub struct Packet {
     pub packet_direction: PacketDirection,
+    /// The name of the corresponding serial port.
     pub port_name: String,
     pub timestamp_millis: u64,
 }
@@ -173,6 +182,7 @@ impl OpenSerialPort {
     }
 }
 
+/// Error returned by [`OpenSerialPort::send`](OpenSerialPort::send) and [`TxHandle::send`](TxHandle::send)
 #[derive(Debug, thiserror::Error)]
 pub enum SendError {
     #[error("Failed to send: {0}")]
