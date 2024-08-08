@@ -25,7 +25,7 @@ pub enum PacketOrigin {
 #[serde(rename_all = "camelCase")]
 pub struct OutgoingPacket {
     pub packet_origin: PacketOrigin,
-    pub data: Vec<u8>,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,7 +80,7 @@ mod core_impl {
         fn from(value: CoreOutgoingPacket) -> Self {
             Self {
                 packet_origin: value.packet_origin.into(),
-                data: value.data.to_vec(),
+                bytes: value.bytes.to_vec(),
             }
         }
     }

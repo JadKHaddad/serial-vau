@@ -7,13 +7,13 @@ use crate::core::state::{
 
 pub fn send_to_serial_port_intern(
     name: String,
-    data: Bytes,
+    bytes: Bytes,
     state: &AppState,
 ) -> Result<(), SendToSerialPortError> {
     tracing::info!(name=%name, "Sending to serial port");
 
     let packet = OutgoingPacket {
-        data,
+        bytes,
         packet_origin: PacketOrigin::Direct,
     };
 

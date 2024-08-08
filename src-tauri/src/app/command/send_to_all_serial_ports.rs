@@ -5,11 +5,11 @@ use crate::core::state::{
     AppState,
 };
 
-pub fn send_to_all_serial_ports_intern(data: Bytes, state: &AppState) {
+pub fn send_to_all_serial_ports_intern(bytes: Bytes, state: &AppState) {
     tracing::info!("Sending to all serial ports");
 
     let packet = OutgoingPacket {
-        data,
+        bytes,
         packet_origin: PacketOrigin::Broadcast,
     };
 

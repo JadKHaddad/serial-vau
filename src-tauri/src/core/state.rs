@@ -348,7 +348,7 @@ impl AppState {
                                                                 tracing::trace!(target: "serial_core::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
 
                                                                 let outgoing_packet = OutgoingPacket {
-                                                                    data: bytes.clone().into(),
+                                                                    bytes: bytes.clone().into(),
                                                                     packet_origin: PacketOrigin::Subscription(SubscriptionPacketOrigin{ name: read_name.clone() }),
                                                                 };
 
@@ -458,12 +458,12 @@ impl AppState {
         tokio::spawn(async move {
             // Dropping the sender will automatically break the loop.
             while let Some(packet) = rx.recv().await {
-                tracing::trace!(target: "serial_core::serial::write::byte", name=%write_name, origin=%packet.packet_origin, data=?packet.data, "Sending");
-                tracing::trace!(target: "serial_core::serial::write::string", name=%write_name, origin=%packet.packet_origin, data=%String::from_utf8_lossy(&packet.data), "Sending");
+                tracing::trace!(target: "serial_core::serial::write::byte", name=%write_name, origin=%packet.packet_origin, bytes=?packet.bytes, "Sending");
+                tracing::trace!(target: "serial_core::serial::write::string", name=%write_name, origin=%packet.packet_origin, bytes=%String::from_utf8_lossy(&packet.bytes), "Sending");
 
                 tokio::select! {
                     // Note: Might get stuck here, therefor the cancellation token.
-                    send_result = framed_write_bytes_port.send(packet.data.clone()) => {
+                    send_result = framed_write_bytes_port.send(packet.bytes.clone()) => {
                         match send_result {
                             Ok(_) => {
                                 tracing::trace!(target: "serial_core::serial::write::result", name=%write_name, origin=%packet.packet_origin, "Ok");
@@ -472,7 +472,7 @@ impl AppState {
                                     PacketDirection::Outgoing(
                                         OutgoingPacket {
                                             packet_origin: packet.packet_origin,
-                                            data: packet.data,
+                                            bytes: packet.bytes,
                                         }
                                     ),
                                     write_name.clone(),

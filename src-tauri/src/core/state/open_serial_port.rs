@@ -55,7 +55,7 @@ impl std::fmt::Display for PacketOrigin {
 /// Represents a packet that is sent to a serial port.
 #[derive(Debug, Clone)]
 pub struct OutgoingPacket {
-    pub data: Bytes,
+    pub bytes: Bytes,
     pub packet_origin: PacketOrigin,
 }
 

@@ -14,7 +14,7 @@ import { useAppStore } from './stores/app';
 import { invoke } from '@tauri-apps/api';
 import { ManagedSerialPortsEvent } from './events/managed-serial-ports';
 import { PacketEvent } from './events/packet';
-import { PacketDirectionType, PacketOriginType } from './models/packet';
+import { PacketData } from './models/intern/packet-data';
 
 const theme = useTheme()
 const app = useAppStore()
@@ -40,39 +40,12 @@ onMounted(async () => {
     const packetEvent = event.payload as PacketEvent;
     const packet = packetEvent.packet;
 
-    console.log(packet);
+    const packetData: PacketData = {
+      packetDirection: packet.packetDirection,
+      timestampMillis: packet.timestampMillis
+    };
 
-    if (packet.packetDirection.type === PacketDirectionType.Outgoing) {
-      console.log('Is outgoing packet');
-      const origin = packet.packetDirection.content.packetOrigin;
-      console.log('Origin: ' + origin.type);
-      if (origin.type == PacketOriginType.Direct) {
-        console.log('Outgoing direct packet');
-      }
-
-      else if (origin.type == PacketOriginType.Broadcast) {
-        console.log('Outgoing broadcast packet');
-      }
-
-      else if (origin.type == PacketOriginType.Subscription) {
-        const from = origin.content.name;
-
-        console.log('Outgoing subscription packet from: ' + from);
-      }
-      else {
-        console.log('Unknown outgoing packet origin');
-      }
-
-    } else {
-      console.log('Is not outgoing packet: ' + packet.packetDirection.type);
-    }
-
-    // const packetData: PacketData = {
-    //   line: incomingPacket.line,
-    //   timestampMillis: incomingPacket.timestampMillis
-    // };
-
-    // app.addPacket(incomingPacket.from, packetData);
+    app.addPacket(packet.portName, packetData);
   });
 
   refreshSerialPorts();
