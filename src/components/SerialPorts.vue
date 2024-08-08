@@ -74,6 +74,7 @@
 </template>
 
 <script setup lang="ts">
+// TODO: Create SerialModel.vue component to be reused. here and in serial monitor
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api';
 import { StatusType, ReadState } from '@/models/managed-serial-port';
