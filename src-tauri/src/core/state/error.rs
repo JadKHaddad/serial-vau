@@ -81,3 +81,16 @@ pub enum OpenSerialPortError {
         TokioSerialError,
     ),
 }
+
+/// Error returned by [`AppState::open_serial_port`](crate::core::state::AppStateInner::remove_and_cancel_open_serial_port).
+#[derive(Debug, thiserror::Error)]
+pub enum RemoveOpenSerialPortError {
+    #[error("Port not found")]
+    NotFound,
+    #[error("Failed to get managed ports: {0}")]
+    ManagedSerialPortsError(
+        #[source]
+        #[from]
+        ManagedSerialPortsError,
+    ),
+}

@@ -1,13 +1,13 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use error::{ManagedSerialPortsError, OpenSerialPortError, PacketError};
+use error::{ManagedSerialPortsError, OpenSerialPortError, PacketError, RemoveOpenSerialPortError};
 use futures::{SinkExt, StreamExt};
-#[cfg(feature = "subscriptions")]
-use open_serial_port::TxHandle;
 use open_serial_port::{
     IncomingPacket, OpenSerialPort, OpenSerialPortOptions, OutgoingPacket, Packet, PacketDirection,
-    PacketOrigin, SendError, SubscriptionPacketOrigin,
+    SendError,
 };
+#[cfg(feature = "subscriptions")]
+use open_serial_port::{PacketOrigin, SubscriptionPacketOrigin, TxHandle};
 use parking_lot::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
@@ -69,13 +69,17 @@ pub struct AppStateInner {
     subscriptions: Arc<RwLock<Subscriptions>>,
 }
 
-impl AppStateInner {
-    pub fn managed_serial_ports(&self) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
-        let available_serial_ports = super::serial::available_ports()?;
-        let open_serial_ports = self.open_serial_ports.read();
-        #[cfg(feature = "subscriptions")]
-        let subscriptions = self.subscriptions.read();
+pub struct RemoveOpenSerialPortReturn {
+    pub removed_open_serial_port: OpenSerialPort,
+    pub managed_serial_ports: Vec<ManagedSerialPort>,
+}
 
+impl AppStateInner {
+    fn raw_managed_serial_ports(
+        open_serial_ports: &OpenSerialPorts,
+        #[cfg(feature = "subscriptions")] subscriptions: &Subscriptions,
+    ) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
+        let available_serial_ports = super::serial::available_ports()?;
         let managed_serial_ports = available_serial_ports
             .into_iter()
             .map(|port| {
@@ -116,8 +120,24 @@ impl AppStateInner {
         Ok(managed_serial_ports)
     }
 
+    pub fn managed_serial_ports(&self) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
+        let open_serial_ports = self.open_serial_ports.read();
+
+        #[cfg(feature = "subscriptions")]
+        {
+            let subscriptions = self.subscriptions.read();
+
+            Self::raw_managed_serial_ports(&open_serial_ports, &subscriptions)
+        }
+
+        #[cfg(not(feature = "subscriptions"))]
+        {
+            Self::raw_managed_serial_ports(&open_serial_ports)
+        }
+    }
+
     /// Adds the serial port to [`Self::open_serial_ports`] and adds it to all subscriptions.
-    pub fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
+    fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
 
         #[cfg(feature = "subscriptions")]
@@ -150,10 +170,11 @@ impl AppStateInner {
     ///
     /// The subscription will not be removed.
     #[cfg(feature = "subscriptions")]
-    fn remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
+    fn remove_open_serial_port_from_all_subscriptions(
+        name: &str,
+        subscriptions: &mut Subscriptions,
+    ) {
         tracing::debug!(name=%name, "Removing serial port as subscriber from all subscriptions");
-
-        let mut subscriptions = self.subscriptions.write();
 
         for (_, tx_handles) in subscriptions.iter_mut() {
             tx_handles.get_mut(name).map(|tx_handle| tx_handle.take());
@@ -161,32 +182,77 @@ impl AppStateInner {
     }
 
     /// Removes the serial port from [`Self::open_serial_ports`] and cancels its subscription.
-    pub fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+    fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+        let mut open_serial_ports = self.open_serial_ports.write();
+
+        #[cfg(feature = "subscriptions")]
+        {
+            let mut subscriptions = self.subscriptions.write();
+
+            Self::raw_remove_open_serial_port(name, &mut open_serial_ports, &mut subscriptions)
+        }
+
+        #[cfg(not(feature = "subscriptions"))]
+        Self::raw_remove_open_serial_port(name, &mut open_serial_ports)
+    }
+
+    fn raw_remove_open_serial_port(
+        name: &str,
+        open_serial_ports: &mut OpenSerialPorts,
+        #[cfg(feature = "subscriptions")] subscriptions: &mut Subscriptions,
+    ) -> Option<OpenSerialPort> {
         tracing::debug!(name=%name, "Removing serial port");
 
         #[cfg(feature = "subscriptions")]
-        self.remove_open_serial_port_from_all_subscriptions(name);
-        self.open_serial_ports.write().remove(name)
+        Self::remove_open_serial_port_from_all_subscriptions(name, subscriptions);
+
+        open_serial_ports.remove(name)
     }
 
     /// Removes and cancels the serial port from [`Self::open_serial_ports`] and cancels its subscription.
-    pub fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
-        self.remove_open_serial_port(name)
-            .map(OpenSerialPort::cancelled)
+    pub fn remove_and_cancel_open_serial_port(
+        &self,
+        name: &str,
+    ) -> Result<RemoveOpenSerialPortReturn, RemoveOpenSerialPortError> {
+        let mut open_serial_ports = self.open_serial_ports.write();
+
+        #[cfg(feature = "subscriptions")]
+        {
+            let mut subscriptions = self.subscriptions.write();
+
+            let removed_open_serial_port =
+                Self::raw_remove_open_serial_port(name, &mut open_serial_ports, &mut subscriptions)
+                    .map(OpenSerialPort::cancelled)
+                    .ok_or(RemoveOpenSerialPortError::NotFound)?;
+
+            let managed_serial_ports =
+                Self::raw_managed_serial_ports(&open_serial_ports, &subscriptions)?;
+
+            Ok(RemoveOpenSerialPortReturn {
+                removed_open_serial_port,
+                managed_serial_ports,
+            })
+        }
+
+        #[cfg(not(feature = "subscriptions"))]
+        {
+            let removed_open_serial_port =
+                Self::raw_remove_open_serial_port(name, &mut open_serial_ports)
+                    .map(OpenSerialPort::cancelled)
+                    .ok_or(RemoveOpenSerialPortError::NotFound)?;
+
+            let managed_serial_ports = Self::raw_managed_serial_ports(&open_serial_ports)?;
+
+            Ok(RemoveOpenSerialPortReturn {
+                removed_open_serial_port,
+                managed_serial_ports,
+            })
+        }
     }
 
     /// - `Ok(Some(bool))` => Port found
     /// - `Ok(None)` => Port not found
-    pub fn is_port_open(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
-        let managed_serial_ports = self.managed_serial_ports()?;
-        let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
-
-        Ok(managed_serial_port.map(|port| port.is_open()))
-    }
-
-    /// - `Ok(Some(bool))` => Port found
-    /// - `Ok(None)` => Port not found
-    pub fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
+    fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
         let managed_serial_ports = self.managed_serial_ports()?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
