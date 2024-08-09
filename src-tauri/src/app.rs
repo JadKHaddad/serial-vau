@@ -10,6 +10,7 @@ use command::{
     toggle_read_state::toggle_read_state_intern,
 };
 use error::AppError;
+use event::emit_managed_serial_ports::emit_managed_serial_ports;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use tauri::{AppHandle, Manager, State};
 
@@ -131,7 +132,7 @@ pub fn run() -> anyhow::Result<()> {
                         Err(err) => {tracing::warn!(%err, "Serial creation event error");}
                     }
 
-                    let _ = refresh_serial_ports_intern(&app_handle_creation, &state_creation);
+                    let _ = emit_managed_serial_ports(&app_handle_creation, &state_creation);
                 }
 
                 tracing::debug!("Serial creation events watcher terminated");
@@ -156,7 +157,7 @@ pub fn run() -> anyhow::Result<()> {
                         }
                     }
 
-                    let _ = refresh_serial_ports_intern(&app_handle_deletion, &state_deletion);
+                    let _ = emit_managed_serial_ports(&app_handle_deletion, &state_deletion);
                 }
 
                 tracing::debug!("Serial deletion events watcher terminated");
