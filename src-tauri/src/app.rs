@@ -91,13 +91,9 @@ pub fn unsubscribe(
 #[tracing::instrument(skip_all)]
 pub fn toggle_read_state(
     name: &str,
-    app: AppHandle,
     state: State<'_, AppState>,
-) -> Result<(), AppError> {
-    toggle_read_state_intern(name, &state)?;
-    refresh_serial_ports_intern(&app, &state)?;
-
-    Ok(())
+) -> Result<Vec<ManagedSerialPort>, AppError> {
+    toggle_read_state_intern(name, &state).map_err(Into::into)
 }
 
 #[tauri::command]

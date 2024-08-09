@@ -61,6 +61,18 @@ export const useAppStore = defineStore('app', () => {
       })
   }
 
+  function toggleReadState(name: string) {
+    invoke('toggle_read_state', { name })
+      .then((response) => {
+        const managedSerialPortsResponse = response as ManagedSerialPort[];
+
+        managedSerialPorts.value = managedSerialPortsResponse;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
   /**
    * Adds a packet to the corresponding port.
    * If the port does not exist, it will be created.
@@ -72,5 +84,5 @@ export const useAppStore = defineStore('app', () => {
     packets.value[portName].push(data);
   }
 
-  return { managedSerialPorts, packets, openSerialPort, closeSerialPort, subscribe, unsubscribe, addPacket }
+  return { managedSerialPorts, packets, openSerialPort, closeSerialPort, subscribe, unsubscribe, toggleReadState, addPacket }
 })

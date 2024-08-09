@@ -145,14 +145,6 @@ const unsubscribe = (from: string, to: string) => {
 };
 
 const toggleReadState = (name: string) => {
-    invoke('toggle_read_state', { name })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.toggleReadState(name);
 };
-
-
 </script>
