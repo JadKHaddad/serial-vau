@@ -2,8 +2,8 @@ use crate::core::state::AppState;
 use anyhow::Context;
 use command::{
     close_serial_port::close_serial_port_intern,
+    get_serial_ports::get_serial_ports_intern,
     open_serial_port::open_serial_port_intern,
-    refresh_serial_ports::refresh_serial_ports_intern,
     send_to_all_serial_ports::send_to_all_serial_ports_intern,
     send_to_serial_port::send_to_serial_port_intern,
     subscribe::{subscribe_intern, unsubscribe_intern},
@@ -23,8 +23,8 @@ mod model;
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn refresh_serial_ports(app: AppHandle, state: State<AppState>) -> Result<(), AppError> {
-    refresh_serial_ports_intern(&app, &state)
+pub fn get_serial_ports(state: State<AppState>) -> Result<Vec<ManagedSerialPort>, AppError> {
+    get_serial_ports_intern(&state).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -57,9 +57,7 @@ pub fn send_to_serial_port(
     value: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    send_to_serial_port_intern(name, value.into(), &state)?;
-
-    Ok(())
+    send_to_serial_port_intern(name, value.into(), &state).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -168,7 +166,7 @@ pub fn run() -> anyhow::Result<()> {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            refresh_serial_ports,
+            get_serial_ports,
             open_serial_port,
             close_serial_port,
             send_to_serial_port,

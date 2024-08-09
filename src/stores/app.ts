@@ -13,6 +13,18 @@ export const useAppStore = defineStore('app', () => {
   const managedSerialPorts = ref<ManagedSerialPort[]>([]);
   const packets = ref<Record<string, PacketData[]>>({});
 
+  function getSerialPorts() {
+    invoke('get_serial_ports')
+      .then((response) => {
+        const managedSerialPortsResponse = response as ManagedSerialPort[];
+
+        managedSerialPorts.value = managedSerialPortsResponse;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
   function openSerialPort(options: OpenSerialPortOptions) {
     invoke('open_serial_port', { options })
       .then((response) => {
@@ -84,5 +96,5 @@ export const useAppStore = defineStore('app', () => {
     packets.value[portName].push(data);
   }
 
-  return { managedSerialPorts, packets, openSerialPort, closeSerialPort, subscribe, unsubscribe, toggleReadState, addPacket }
+  return { managedSerialPorts, packets, getSerialPorts, openSerialPort, closeSerialPort, subscribe, unsubscribe, toggleReadState, addPacket }
 })

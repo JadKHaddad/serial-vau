@@ -11,7 +11,6 @@ import { onMounted, onUnmounted } from 'vue';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { useTheme } from 'vuetify'
 import { useAppStore } from './stores/app';
-import { invoke } from '@tauri-apps/api';
 import { ManagedSerialPortsEvent } from './events/managed-serial-ports';
 import { PacketEvent } from './events/packet';
 import { PacketData } from './models/intern/packet-data';
@@ -48,7 +47,7 @@ onMounted(async () => {
     app.addPacket(packet.portName, packetData);
   });
 
-  refreshSerialPorts();
+  getSerialPorts();
 });
 
 onUnmounted(() => {
@@ -65,14 +64,8 @@ onUnmounted(() => {
   }
 });
 
-const refreshSerialPorts = () => {
-  invoke('refresh_serial_ports')
-    .then((response) => {
-
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+const getSerialPorts = () => {
+  app.getSerialPorts();
 };
 
 </script>
