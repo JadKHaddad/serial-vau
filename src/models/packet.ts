@@ -20,7 +20,7 @@ export type PacketOrigin =
 
 export interface OutgoingPacket {
     packetOrigin: PacketOrigin;
-    bytes: number[];
+    bytes: Uint8Array;
 }
 
 export enum PacketDirectionType {
