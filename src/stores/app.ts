@@ -5,11 +5,37 @@
 // this will allow us to handle seperate backends (taurim or web) (web events are socketio events).
 import { PacketData } from '@/models/intern/packet-data';
 import { ManagedSerialPort } from '@/models/managed-serial-port';
+import { OpenSerialPortOptions } from '@/models/open-options';
 import { defineStore } from 'pinia'
+import { invoke } from '@tauri-apps/api';
 
 export const useAppStore = defineStore('app', () => {
   const managedSerialPorts = ref<ManagedSerialPort[]>([]);
   const packets = ref<Record<string, PacketData[]>>({});
+
+  function openSerialPort(options: OpenSerialPortOptions) {
+    invoke('open_serial_port', { options })
+      .then((response) => {
+        const managedSerialPortsResponse = response as ManagedSerialPort[];
+
+        managedSerialPorts.value = managedSerialPortsResponse;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+  }
+
+  function closeSerialPort(name: string) {
+    invoke('close_serial_port', { name })
+      .then((response) => {
+        const managedSerialPortsResponse = response as ManagedSerialPort[];
+
+        managedSerialPorts.value = managedSerialPortsResponse;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+  }
 
   /**
    * Adds a packet to the corresponding port.
@@ -22,5 +48,5 @@ export const useAppStore = defineStore('app', () => {
     packets.value[portName].push(data);
   }
 
-  return { managedSerialPorts, packets, addPacket }
+  return { managedSerialPorts, packets, openSerialPort, closeSerialPort, addPacket }
 })

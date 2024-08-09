@@ -99,23 +99,11 @@ const clearSerialPortValue = (name: string) => {
 }
 
 const openSerialPort = (options: OpenSerialPortOptions) => {
-    invoke('open_serial_port', { options })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.openSerialPort(options);
 }
 
 const closeSerialPort = (name: string) => {
-    invoke('close_serial_port', { name })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.closeSerialPort(name);
 }
 
 const sendToSerialPort = (name: string, value: string) => {

@@ -10,7 +10,7 @@ use command::{
     toggle_read_state::toggle_read_state_intern,
 };
 use error::AppError;
-use model::open_options::OpenSerialPortOptions;
+use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use tauri::{AppHandle, Manager, State};
 
 use crate::core::serial::watcher::Watcher as SerialWatcher;
@@ -32,24 +32,21 @@ pub async fn open_serial_port(
     options: OpenSerialPortOptions,
     app: AppHandle,
     state: State<'_, AppState>,
-) -> Result<(), AppError> {
-    open_serial_port_intern(options, &app, &state).await?;
-    refresh_serial_ports_intern(&app, &state)?;
-
-    Ok(())
+) -> Result<Vec<ManagedSerialPort>, AppError> {
+    open_serial_port_intern(options, &app, &state)
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
 pub async fn close_serial_port(
     name: String,
-    app: AppHandle,
     state: State<'_, AppState>,
-) -> Result<(), AppError> {
-    close_serial_port_intern(name, &state).await?;
-    refresh_serial_ports_intern(&app, &state)?;
-
-    Ok(())
+) -> Result<Vec<ManagedSerialPort>, AppError> {
+    close_serial_port_intern(name, &state)
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
