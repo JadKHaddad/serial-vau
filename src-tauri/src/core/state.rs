@@ -50,6 +50,8 @@ type OpenSerialPorts = HashMap<String, OpenSerialPort>;
 #[cfg(feature = "subscriptions")]
 type Subscriptions = HashMap<String, HashMap<String, Option<TxHandle>>>;
 
+/// ## Note
+/// Locks are not optimized. See branch [`feat/optimize-locks`](https://github.com/JadKHaddad/serial-vau/tree/feat/optimize-locks) for optimized locks sacrificing readability.
 #[derive(Debug, Default)]
 pub struct AppStateInner {
     /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
