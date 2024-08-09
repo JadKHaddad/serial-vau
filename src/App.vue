@@ -20,7 +20,7 @@ const app = useAppStore()
 
 let unlistenThemeChangedEvent: UnlistenFn;
 let unlistenSerialPortsEvent: UnlistenFn;
-let unlistenSerialLineEvent: UnlistenFn;
+let unlistenSerialPacketEvent: UnlistenFn;
 
 onMounted(async () => {
   unlistenThemeChangedEvent = await listen('tauri://theme-changed', (event) => {
@@ -35,7 +35,7 @@ onMounted(async () => {
     app.managedSerialPorts = managedSerialPortsEvent.ports;
   });
 
-  unlistenSerialLineEvent = await listen('serial_packet_event', (event) => {
+  unlistenSerialPacketEvent = await listen('serial_packet_event', (event) => {
     const packetEvent = event.payload as PacketEvent;
     const packet = packetEvent.packet;
 
@@ -59,8 +59,8 @@ onUnmounted(() => {
     unlistenSerialPortsEvent();
   }
 
-  if (unlistenSerialLineEvent) {
-    unlistenSerialLineEvent();
+  if (unlistenSerialPacketEvent) {
+    unlistenSerialPacketEvent();
   }
 });
 
