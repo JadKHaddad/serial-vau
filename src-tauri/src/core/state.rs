@@ -13,9 +13,11 @@ use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
 use tokio_util::{
     bytes::BytesMut,
-    codec::{BytesCodec, Decoder, FramedRead, FramedWrite, LinesCodec},
+    codec::{BytesCodec, Decoder, FramedRead, FramedWrite},
     sync::CancellationToken,
 };
+
+use super::codec::lines_codec::LinesCodec;
 
 use super::serial::{managed_serial_port::OpenStatus, SerialPort};
 
@@ -368,7 +370,7 @@ impl AppState {
                                                         match lines_codec.decode(&mut lines_bytes) {
                                                             Ok(None) => break,
                                                             Ok(Some(line)) => {
-                                                                tracing::trace!(target: "serial_core::serial::read::line", name=%read_name, %line, "Read");
+                                                                tracing::trace!(target: "serial_core::serial::read::line", name=%read_name, ?line, "Read");
 
                                                                 let packet = Packet::new_with_current_timestamp(
                                                                     PacketDirection::Incoming(

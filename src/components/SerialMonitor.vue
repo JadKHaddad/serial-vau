@@ -61,16 +61,16 @@ const packetTitle = (packet: PacketData) => {
         const origin = packet.packetDirection.content.packetOrigin;
 
         if (origin.type === PacketOriginType.Direct) {
-            return `Direct <| ${packet.packetDirection.content.bytes}`;
+            return `Direct <| ${packet.packetDirection.content.value}`;
         }
 
         if (origin.type === PacketOriginType.Broadcast) {
-            return `Broadcast <| ${packet.packetDirection.content.bytes}`;
+            return `Broadcast <| ${packet.packetDirection.content.value}`;
         }
 
         if (origin.type === PacketOriginType.Subscription) {
             const from = origin.content.name;
-            return `Subscription(${from}) <| ${packet.packetDirection.content.bytes}`;
+            return `Subscription(${from}) <| ${packet.packetDirection.content.value}`;
         }
     }
 

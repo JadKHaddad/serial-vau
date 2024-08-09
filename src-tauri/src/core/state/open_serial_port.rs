@@ -21,7 +21,7 @@ pub struct OpenSerialPortOptions {
 /// Represents a packet that is received from a serial port.
 #[derive(Debug, Clone)]
 pub struct IncomingPacket {
-    pub line: String, // TODO: Maybe use just bytes that represet a line. (Without new line char)
+    pub line: Bytes,
 }
 
 #[cfg(feature = "subscriptions")]

@@ -25,16 +25,17 @@ pub enum PacketOrigin {
 #[serde(rename_all = "camelCase")]
 pub struct OutgoingPacket {
     pub packet_origin: PacketOrigin,
-    pub bytes: Vec<u8>,
+    /// Lossy UTF-8 string representation of the sent bytes.
+    pub value: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "type", content = "content")]
 pub enum PacketDirection {
-    /// From the open serial port to the application
+    /// From the open serial port to the application.
     Incoming(IncomingPacket),
-    /// From the application to the open serial port
+    /// From the application to the open serial port.
     Outgoing(OutgoingPacket),
 }
 
@@ -56,7 +57,9 @@ mod core_impl {
 
     impl From<CoreIncomingPacket> for IncomingPacket {
         fn from(value: CoreIncomingPacket) -> Self {
-            Self { line: value.line }
+            Self {
+                line: String::from_utf8_lossy(&value.line).to_string(),
+            }
         }
     }
 
@@ -80,7 +83,7 @@ mod core_impl {
         fn from(value: CoreOutgoingPacket) -> Self {
             Self {
                 packet_origin: value.packet_origin.into(),
-                bytes: value.bytes.to_vec(),
+                value: String::from_utf8_lossy(&value.bytes).to_string(),
             }
         }
     }

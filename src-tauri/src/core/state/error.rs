@@ -1,9 +1,8 @@
 use std::io::Error as IOError;
 
 use tokio_serial::Error as TokioSerialError;
-use tokio_util::codec::LinesCodecError;
 
-use crate::core::serial::AvailablePortsError;
+use crate::core::{codec::lines_codec::LinesCodecError, serial::AvailablePortsError};
 
 /// Error returned by [`AppStateInner::managed_serial_ports`](crate::core::state::AppStateInner::managed_serial_ports).
 #[derive(Debug, thiserror::Error)]
