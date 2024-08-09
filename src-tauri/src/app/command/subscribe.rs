@@ -12,10 +12,11 @@ pub fn subscribe_intern(
 
     #[cfg(feature = "subscriptions")]
     return {
-        _state.subscribe(from, to);
-
-        let managed_serial_ports = _state.managed_serial_ports()?;
-        let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
+        let managed_serial_ports = _state
+            .subscribe(from, to)?
+            .into_iter()
+            .map(Into::into)
+            .collect();
 
         Ok(managed_serial_ports)
     };
@@ -33,10 +34,11 @@ pub fn unsubscribe_intern(
 
     #[cfg(feature = "subscriptions")]
     return {
-        _state.unsubscribe(from, to);
-
-        let managed_serial_ports = _state.managed_serial_ports()?;
-        let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
+        let managed_serial_ports = _state
+            .unsubscribe(from, to)?
+            .into_iter()
+            .map(Into::into)
+            .collect();
 
         Ok(managed_serial_ports)
     };

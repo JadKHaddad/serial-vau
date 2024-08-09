@@ -300,21 +300,24 @@ impl AppStateInner {
     /// - `from` will send data to `to`.
     /// - `to` will receive data from `from`.
     #[cfg(feature = "subscriptions")]
-    pub fn subscribe(&self, from: &str, to: &str) {
+    pub fn subscribe(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
         tracing::debug!(%from, %to, "Subscribing");
 
+        let open_serial_ports = self.open_serial_ports.read();
         let mut subscriptions = self.subscriptions.write();
 
-        let tx_handle = self
-            .open_serial_ports
-            .read()
-            .get(to)
-            .map(|port| port.tx_handle());
+        let tx_handle = open_serial_ports.get(to).map(|port| port.tx_handle());
 
         subscriptions
             .entry(from.to_string())
             .or_default()
             .insert(to.to_string(), tx_handle);
+
+        Self::raw_managed_serial_ports(&open_serial_ports, &subscriptions)
     }
 
     /// `to` is unsubscribed from `from`.
@@ -322,14 +325,21 @@ impl AppStateInner {
     /// - `from` will no longer send data to `to`.
     /// - `to` will no longer receive data from `from`.,
     #[cfg(feature = "subscriptions")]
-    pub fn unsubscribe(&self, from: &str, to: &str) {
+    pub fn unsubscribe(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
         tracing::debug!(%from, %to, "Unsubscribing");
 
+        let open_serial_ports = self.open_serial_ports.read();
         let mut subscriptions = self.subscriptions.write();
 
         subscriptions
             .get_mut(from)
             .and_then(|tx_handles| tx_handles.remove(to));
+
+        Self::raw_managed_serial_ports(&open_serial_ports, &subscriptions)
     }
 
     fn raw_toggle_read_state(
