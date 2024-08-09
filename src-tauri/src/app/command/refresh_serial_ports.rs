@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    app::{error::AppError, event::managed_serial_ports::ManagedSerialPortsEvent},
+    app::{error::AppError, event::model::managed_serial_ports::ManagedSerialPortsEvent},
     core::state::AppState,
 };
 

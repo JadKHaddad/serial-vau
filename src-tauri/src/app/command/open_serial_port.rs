@@ -2,7 +2,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     app::{
-        event::packet::PacketEvent,
+        event::model::packet::PacketEvent,
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
     },
     core::state::{
