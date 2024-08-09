@@ -37,6 +37,30 @@ export const useAppStore = defineStore('app', () => {
       })
   }
 
+  function subscribe(from: string, to: string) {
+    invoke('subscribe', { from, to })
+      .then((response) => {
+        const managedSerialPortsResponse = response as ManagedSerialPort[];
+
+        managedSerialPorts.value = managedSerialPortsResponse;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+  }
+
+  function unsubscribe(from: string, to: string) {
+    invoke('unsubscribe', { from, to })
+      .then((response) => {
+        const managedSerialPortsResponse = response as ManagedSerialPort[];
+
+        managedSerialPorts.value = managedSerialPortsResponse;
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+  }
+
   /**
    * Adds a packet to the corresponding port.
    * If the port does not exist, it will be created.
@@ -48,5 +72,5 @@ export const useAppStore = defineStore('app', () => {
     packets.value[portName].push(data);
   }
 
-  return { managedSerialPorts, packets, openSerialPort, closeSerialPort, addPacket }
+  return { managedSerialPorts, packets, openSerialPort, closeSerialPort, subscribe, unsubscribe, addPacket }
 })

@@ -56,9 +56,7 @@ pub fn send_to_serial_port(
     value: String,
     state: State<'_, AppState>,
 ) -> Result<(), AppError> {
-    let value = value.into();
-
-    send_to_serial_port_intern(name, value, &state)?;
+    send_to_serial_port_intern(name, value.into(), &state)?;
 
     Ok(())
 }
@@ -66,9 +64,7 @@ pub fn send_to_serial_port(
 #[tauri::command]
 #[tracing::instrument(skip_all)]
 pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
-    let value = value.into();
-
-    send_to_all_serial_ports_intern(value, &state);
+    send_to_all_serial_ports_intern(value.into(), &state);
 }
 
 #[tauri::command]
@@ -76,13 +72,9 @@ pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
 pub fn subscribe(
     from: &str,
     to: &str,
-    app: AppHandle,
     state: State<'_, AppState>,
-) -> Result<(), AppError> {
-    subscribe_intern(from, to, &state)?;
-    refresh_serial_ports_intern(&app, &state)?;
-
-    Ok(())
+) -> Result<Vec<ManagedSerialPort>, AppError> {
+    subscribe_intern(from, to, &state).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -90,13 +82,9 @@ pub fn subscribe(
 pub fn unsubscribe(
     from: &str,
     to: &str,
-    app: AppHandle,
     state: State<'_, AppState>,
-) -> Result<(), AppError> {
-    unsubscribe_intern(from, to, &state)?;
-    refresh_serial_ports_intern(&app, &state)?;
-
-    Ok(())
+) -> Result<Vec<ManagedSerialPort>, AppError> {
+    unsubscribe_intern(from, to, &state).map_err(Into::into)
 }
 
 #[tauri::command]

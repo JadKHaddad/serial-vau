@@ -137,23 +137,11 @@ const sendToAllSerialPortsAndClearBroadcastValue = (value: string) => {
 };
 
 const subscribe = (from: string, to: string) => {
-    invoke('subscribe', { from, to })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.subscribe(from, to);
 };
 
 const unsubscribe = (from: string, to: string) => {
-    invoke('unsubscribe', { from, to })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.unsubscribe(from, to);
 };
 
 const toggleReadState = (name: string) => {
