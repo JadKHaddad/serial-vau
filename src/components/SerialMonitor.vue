@@ -38,7 +38,6 @@ import { PacketData } from '@/models/intern/packet-data';
 import { PacketDirectionType, PacketOriginType } from '@/models/packet';
 import { StatusType } from '@/models/managed-serial-port';
 import { useAppStore } from '@/stores/app';
-import { invoke } from '@tauri-apps/api';
 
 const app = useAppStore();
 const selectedPortIndex = ref<number>(0);
@@ -81,13 +80,7 @@ const packetTitle = (packet: PacketData) => {
 };
 
 const sendToSerialPort = (name: string, value: string) => {
-    invoke('send_to_serial_port', { name, value })
-        .then((response) => {
-            console.log(response);
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.sendToSerialPort(name, value);
 };
 
 const sendToSerialPortAndClearValue = (name: string, value: string) => {

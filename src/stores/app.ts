@@ -1,5 +1,3 @@
-// TODO: make every function to the backend (tauri or any other) that required user interaction return a value and set it here in the sate.
-// Events should only be processed, when something in the backend happened without user interaction.
 // TODO: Move the functions and the event listeners to a single module. move the backend specific functions and events to a backend specific module
 // then use the backend specific module in the Functions/Events module.
 // this will allow us to handle seperate backends (taurim or web) (web events are socketio events).
@@ -85,6 +83,26 @@ export const useAppStore = defineStore('app', () => {
       });
   }
 
+  function sendToSerialPort(name: string, value: string) {
+    invoke('send_to_serial_port', { name, value })
+      .then((response) => {
+
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  function sendToAllSerialPorts(value: string) {
+    invoke('send_to_all_serial_ports', { value })
+      .then((response) => {
+
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
   /**
    * Adds a packet to the corresponding port.
    * If the port does not exist, it will be created.
@@ -96,5 +114,5 @@ export const useAppStore = defineStore('app', () => {
     packets.value[portName].push(data);
   }
 
-  return { managedSerialPorts, packets, getSerialPorts, openSerialPort, closeSerialPort, subscribe, unsubscribe, toggleReadState, addPacket }
+  return { managedSerialPorts, packets, getSerialPorts, openSerialPort, closeSerialPort, subscribe, unsubscribe, toggleReadState, sendToSerialPort, sendToAllSerialPorts, addPacket }
 })

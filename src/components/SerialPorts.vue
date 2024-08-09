@@ -79,7 +79,6 @@
 <script setup lang="ts">
 // TODO: Create SerialModel.vue component to be reused. here and in serial monitor
 import { ref } from 'vue';
-import { invoke } from '@tauri-apps/api';
 import { StatusType, ReadState } from '@/models/managed-serial-port';
 import { useAppStore } from '@/stores/app';
 import { OpenSerialPortOptions } from '@/models/open-options';
@@ -107,13 +106,7 @@ const closeSerialPort = (name: string) => {
 }
 
 const sendToSerialPort = (name: string, value: string) => {
-    invoke('send_to_serial_port', { name, value })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.sendToSerialPort(name, value);
 };
 
 const sendToSerialPortAncClearValue = (name: string, value: string) => {
@@ -122,13 +115,7 @@ const sendToSerialPortAncClearValue = (name: string, value: string) => {
 };
 
 const sendToAllSerialPorts = (value: string) => {
-    invoke('send_to_all_serial_ports', { value })
-        .then((response) => {
-
-        })
-        .catch((error) => {
-            console.error(error);
-        });
+    app.sendToAllSerialPorts(value);
 };
 
 const sendToAllSerialPortsAndClearBroadcastValue = (value: string) => {
