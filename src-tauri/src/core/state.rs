@@ -69,8 +69,15 @@ pub struct AppStateInner {
     subscriptions: Arc<RwLock<Subscriptions>>,
 }
 
+#[non_exhaustive]
 pub struct RemoveOpenSerialPortReturn {
-    pub removed_open_serial_port: OpenSerialPort,
+    pub removed_and_cancelled_open_serial_port: OpenSerialPort,
+    pub managed_serial_ports: Vec<ManagedSerialPort>,
+}
+
+#[non_exhaustive]
+pub struct OpenSerialPortReturn {
+    pub packet_event_rx: MPSCUnboundedReceiver<Result<Packet, PacketError>>,
     pub managed_serial_ports: Vec<ManagedSerialPort>,
 }
 
@@ -136,26 +143,29 @@ impl AppStateInner {
         }
     }
 
-    /// Adds the serial port to [`Self::open_serial_ports`] and adds it to all subscriptions.
-    fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
+    /// Adds the serial port to `open_serial_ports` and adds it to all subscriptions.
+    fn raw_add_open_serial_port(
+        open_serial_ports: &mut OpenSerialPorts,
+        open_serial_port: OpenSerialPort,
+        #[cfg(feature = "subscriptions")] subscriptions: &mut Subscriptions,
+    ) -> Option<OpenSerialPort> {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
 
         #[cfg(feature = "subscriptions")]
-        self.add_open_serial_port_to_pending_subscriptions(&open_serial_port);
+        Self::raw_add_open_serial_port_to_pending_subscriptions(&open_serial_port, subscriptions);
 
-        self.open_serial_ports
-            .write()
-            .insert(open_serial_port.name().to_string(), open_serial_port)
+        open_serial_ports.insert(open_serial_port.name().to_string(), open_serial_port)
     }
 
     /// Sets the [`Option<TxHandle>`] of the given serial port to `Some(TxHandle)` in all subscriptions.
     ///
     /// A subscription can exist before the subscriber is open.
     #[cfg(feature = "subscriptions")]
-    fn add_open_serial_port_to_pending_subscriptions(&self, open_serial_port: &OpenSerialPort) {
+    fn raw_add_open_serial_port_to_pending_subscriptions(
+        open_serial_port: &OpenSerialPort,
+        subscriptions: &mut Subscriptions,
+    ) {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port to pending subscriptions");
-
-        let mut subscriptions = self.subscriptions.write();
 
         for (_, tx_handles) in subscriptions.iter_mut() {
             tx_handles
@@ -170,7 +180,7 @@ impl AppStateInner {
     ///
     /// The subscription will not be removed.
     #[cfg(feature = "subscriptions")]
-    fn remove_open_serial_port_from_all_subscriptions(
+    fn raw_remove_open_serial_port_from_all_subscriptions(
         name: &str,
         subscriptions: &mut Subscriptions,
     ) {
@@ -204,7 +214,7 @@ impl AppStateInner {
         tracing::debug!(name=%name, "Removing serial port");
 
         #[cfg(feature = "subscriptions")]
-        Self::remove_open_serial_port_from_all_subscriptions(name, subscriptions);
+        Self::raw_remove_open_serial_port_from_all_subscriptions(name, subscriptions);
 
         open_serial_ports.remove(name)
     }
@@ -220,7 +230,7 @@ impl AppStateInner {
         {
             let mut subscriptions = self.subscriptions.write();
 
-            let removed_open_serial_port =
+            let removed_and_cancelled_open_serial_port =
                 Self::raw_remove_open_serial_port(name, &mut open_serial_ports, &mut subscriptions)
                     .map(OpenSerialPort::cancelled)
                     .ok_or(RemoveOpenSerialPortError::NotFound)?;
@@ -229,14 +239,14 @@ impl AppStateInner {
                 Self::raw_managed_serial_ports(&open_serial_ports, &subscriptions)?;
 
             Ok(RemoveOpenSerialPortReturn {
-                removed_open_serial_port,
+                removed_and_cancelled_open_serial_port,
                 managed_serial_ports,
             })
         }
 
         #[cfg(not(feature = "subscriptions"))]
         {
-            let removed_open_serial_port =
+            let removed_and_cancelled_open_serial_port =
                 Self::raw_remove_open_serial_port(name, &mut open_serial_ports)
                     .map(OpenSerialPort::cancelled)
                     .ok_or(RemoveOpenSerialPortError::NotFound)?;
@@ -244,7 +254,7 @@ impl AppStateInner {
             let managed_serial_ports = Self::raw_managed_serial_ports(&open_serial_ports)?;
 
             Ok(RemoveOpenSerialPortReturn {
-                removed_open_serial_port,
+                removed_and_cancelled_open_serial_port,
                 managed_serial_ports,
             })
         }
@@ -334,7 +344,7 @@ impl AppState {
     pub async fn open_serial_port(
         &self,
         options: OpenSerialPortOptions,
-    ) -> Result<MPSCUnboundedReceiver<Result<Packet, PacketError>>, OpenSerialPortError> {
+    ) -> Result<OpenSerialPortReturn, OpenSerialPortError> {
         tracing::debug!(?options, "Opening serial port");
 
         let port_to_open_name = self
@@ -364,12 +374,44 @@ impl AppState {
         let (read_state_tx, mut read_state_rx) =
             tokio::sync::watch::channel(options.initial_read_state);
 
-        self.add_open_serial_port(OpenSerialPort::new(
+        let mut open_serial_ports = self.open_serial_ports.write();
+        let open_serial_port = OpenSerialPort::new(
             SerialPort::new(options.name.clone()),
             tx,
             cancellation_token.clone(),
             read_state_tx,
-        ));
+        );
+
+        #[cfg(feature = "subscriptions")]
+        let ret = {
+            let mut subscriptions = self.subscriptions.write();
+
+            AppStateInner::raw_add_open_serial_port(
+                &mut open_serial_ports,
+                open_serial_port,
+                &mut subscriptions,
+            );
+
+            let managed_serial_ports =
+                AppStateInner::raw_managed_serial_ports(&open_serial_ports, &subscriptions)?;
+
+            OpenSerialPortReturn {
+                packet_event_rx: packet_rx,
+                managed_serial_ports,
+            }
+        };
+
+        #[cfg(not(feature = "subscriptions"))]
+        let ret = {
+            AppStateInner::raw_add_open_serial_port(&mut open_serial_ports, open_serial_port);
+
+            let managed_serial_ports = AppStateInner::raw_managed_serial_ports(&open_serial_ports)?;
+
+            OpenSerialPortReturn {
+                packet_event_rx: packet_rx,
+                managed_serial_ports,
+            }
+        };
 
         #[cfg(feature = "subscriptions")]
         let subscriptions = self.subscriptions();
@@ -518,7 +560,7 @@ impl AppState {
         });
 
         let write_name = options.name.clone();
-        let write_cancellation_token = cancellation_token;
+        let write_cancellation_token = cancellation_token.clone();
         let write_packet_tx = packet_tx.clone();
 
         tokio::spawn(async move {
@@ -570,6 +612,6 @@ impl AppState {
             tracing::debug!(target: "serial_core::serial::write", name=%write_name, "Write task terminated")
         });
 
-        Ok(packet_rx)
+        Ok(ret)
     }
 }

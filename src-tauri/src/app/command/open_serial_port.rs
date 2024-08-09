@@ -7,7 +7,7 @@ use crate::{
     },
     core::state::{
         error::{ManagedSerialPortsError, OpenSerialPortError as CoreOpenSerialPortError},
-        AppState,
+        AppState, OpenSerialPortReturn,
     },
 };
 
@@ -20,11 +20,14 @@ pub async fn open_serial_port_intern(
 
     let name = options.name.clone();
 
-    let mut rx = state.open_serial_port(options.into()).await?;
+    let OpenSerialPortReturn {
+        mut packet_event_rx,
+        managed_serial_ports,
+    } = state.open_serial_port(options.into()).await?;
 
     let app = app.clone();
     tokio::spawn(async move {
-        while let Some(packet) = rx.recv().await {
+        while let Some(packet) = packet_event_rx.recv().await {
             match packet {
                 Ok(packet) => {
                     let event = PacketEvent {
@@ -40,7 +43,6 @@ pub async fn open_serial_port_intern(
         }
     });
 
-    let managed_serial_ports = state.managed_serial_ports()?;
     let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)

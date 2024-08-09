@@ -8,11 +8,13 @@ pub fn get_serial_ports_intern(
 ) -> Result<Vec<ManagedSerialPort>, GetSerialPortsError> {
     tracing::info!("Getting serial ports");
 
-    let managed_serial_ports = state.managed_serial_ports()?;
+    let managed_serial_ports = state
+        .managed_serial_ports()?
+        .into_iter()
+        .map(Into::into)
+        .collect();
 
     tracing::debug!(?managed_serial_ports);
-
-    let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)
 }
