@@ -94,3 +94,16 @@ pub enum RemoveOpenSerialPortError {
         ManagedSerialPortsError,
     ),
 }
+
+/// Error returned by [`AppState::open_serial_port`](crate::core::state::AppStateInner::toggle_read_state).
+#[derive(Debug, thiserror::Error)]
+pub enum ToggleReadStateError {
+    #[error("Port not found")]
+    NotFound,
+    #[error("Failed to get managed ports: {0}")]
+    ManagedSerialPortsError(
+        #[source]
+        #[from]
+        ManagedSerialPortsError,
+    ),
+}

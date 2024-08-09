@@ -1,6 +1,9 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use error::{ManagedSerialPortsError, OpenSerialPortError, PacketError, RemoveOpenSerialPortError};
+use error::{
+    ManagedSerialPortsError, OpenSerialPortError, PacketError, RemoveOpenSerialPortError,
+    ToggleReadStateError,
+};
 use futures::{SinkExt, StreamExt};
 use open_serial_port::{
     IncomingPacket, OpenSerialPort, OpenSerialPortOptions, OutgoingPacket, Packet, PacketDirection,
@@ -329,14 +332,42 @@ impl AppStateInner {
             .and_then(|tx_handles| tx_handles.remove(to));
     }
 
-    /// - `Some(())` => Ok
-    /// - `None` => Port not found
-    pub fn toggle_read_state(&self, name: &str) -> Option<()> {
+    fn raw_toggle_read_state(
+        open_serial_ports: &mut OpenSerialPorts,
+        name: &str,
+    ) -> Result<(), ToggleReadStateError> {
         tracing::debug!(name=%name, "Toggling read state");
 
-        return self.open_serial_ports.read().get(name).map(|port| {
-            port.set_read_state(port.read_state().toggle());
-        });
+        open_serial_ports
+            .get(name)
+            .ok_or(ToggleReadStateError::NotFound)
+            .map(|port| {
+                port.set_read_state(port.read_state().toggle());
+            })
+    }
+
+    pub fn toggle_read_state(
+        &self,
+        name: &str,
+    ) -> Result<Vec<ManagedSerialPort>, ToggleReadStateError> {
+        let mut open_serial_ports = self.open_serial_ports.write();
+
+        Self::raw_toggle_read_state(&mut open_serial_ports, name)?;
+
+        #[cfg(feature = "subscriptions")]
+        {
+            let subscriptions = self.subscriptions.read();
+
+            Ok(Self::raw_managed_serial_ports(
+                &open_serial_ports,
+                &subscriptions,
+            )?)
+        }
+
+        #[cfg(not(feature = "subscriptions"))]
+        {
+            Ok(Self::raw_managed_serial_ports(&open_serial_ports)?)
+        }
     }
 }
 
