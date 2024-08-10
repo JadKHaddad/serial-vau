@@ -7,7 +7,7 @@ import { PacketDirection } from "../packet";
  * This will be stored in a list as a value of map.
  * The key for the map is the port name.
  */
-export interface PacketData {
+export type PacketData = {
     packetDirection: PacketDirection;
     timestampMillis: number;
 }

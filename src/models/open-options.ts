@@ -24,12 +24,12 @@ export enum StopBits {
     Two = "two"
 }
 
-export interface Duration {
+export type Duration = {
     secs: number;
     nanos: number;
 }
 
-export interface OpenSerialPortOptions {
+export type OpenSerialPortOptions = {
     name: string;
     initialReadState: ReadState;
     baudRate: number;

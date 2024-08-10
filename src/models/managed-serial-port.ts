@@ -2,7 +2,7 @@ export type Status =
     | { type: StatusType.Closed }
     | { type: StatusType.Open; content: OpenStatus };
 
-export interface OpenStatus {
+export type OpenStatus = {
     readState: ReadState;
 }
 
@@ -16,7 +16,7 @@ export enum ReadState {
     Stop = "stop",
 }
 
-export interface ManagedSerialPort {
+export type ManagedSerialPort = {
     name: string;
     status: Status;
     subscriptions: string[];
@@ -24,7 +24,7 @@ export interface ManagedSerialPort {
     readState?: ReadState;
 }
 
-export interface IncomigPacket {
+export type IncomigPacket = {
     from: string,
     line: string,
     timestampMillis: number

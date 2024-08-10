@@ -1,8 +1,8 @@
-export interface IncomingPacket {
+export type IncomingPacket = {
     line: string;
 }
 
-export interface SubscriptionPacketOrigin {
+export type SubscriptionPacketOrigin = {
     name: string;
 }
 
@@ -18,7 +18,7 @@ export type PacketOrigin =
     | { type: PacketOriginType.Subscription; content: SubscriptionPacketOrigin };
 
 
-export interface OutgoingPacket {
+export type OutgoingPacket = {
     packetOrigin: PacketOrigin;
     value: string;
 }
@@ -32,7 +32,7 @@ export type PacketDirection =
     | { type: PacketDirectionType.Incoming; content: IncomingPacket }
     | { type: PacketDirectionType.Outgoing; content: OutgoingPacket };
 
-export interface Packet {
+export type Packet = {
     packetDirection: PacketDirection;
     portName: string;
     timestampMillis: number;
