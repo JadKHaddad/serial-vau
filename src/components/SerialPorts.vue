@@ -47,7 +47,7 @@
                             </v-list-item>
                         </v-list>
                     </v-menu>
-
+                    <!-- TODO: display options -->
                     <v-btn @click="openSerialPort({
                         name: port.name,
                         initialReadState: ReadState.Read,
