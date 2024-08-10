@@ -18,6 +18,7 @@ pub struct SubscriptionPacketOrigin {
 pub enum PacketOrigin {
     Direct,
     Broadcast,
+    #[cfg(feature = "subscriptions")]
     Subscription(SubscriptionPacketOrigin),
 }
 
@@ -49,10 +50,12 @@ pub struct Packet {
 
 mod core_impl {
     use super::*;
+    #[cfg(feature = "subscriptions")]
+    use crate::core::state::open_serial_port::SubscriptionPacketOrigin as CoreSubscriptionPacketOrigin;
     use crate::core::state::open_serial_port::{
         IncomingPacket as CoreIncomingPacket, OutgoingPacket as CoreOutgoingPacket,
         Packet as CorePacket, PacketDirection as CorePacketDirection,
-        PacketOrigin as CorePacketOrigin, SubscriptionPacketOrigin as CoreSubscriptionPacketOrigin,
+        PacketOrigin as CorePacketOrigin,
     };
 
     impl From<CoreIncomingPacket> for IncomingPacket {
@@ -63,6 +66,7 @@ mod core_impl {
         }
     }
 
+    #[cfg(feature = "subscriptions")]
     impl From<CoreSubscriptionPacketOrigin> for SubscriptionPacketOrigin {
         fn from(value: CoreSubscriptionPacketOrigin) -> Self {
             Self { name: value.name }
@@ -74,6 +78,7 @@ mod core_impl {
             match value {
                 CorePacketOrigin::Direct => Self::Direct,
                 CorePacketOrigin::Broadcast => Self::Broadcast,
+                #[cfg(feature = "subscriptions")]
                 CorePacketOrigin::Subscription(origin) => Self::Subscription(origin.into()),
             }
         }
