@@ -10,7 +10,7 @@ use open_serial_port::{
 };
 use parking_lot::RwLock;
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
-use tokio_serial::{DataBits, FlowControl, Parity, SerialPortBuilderExt, StopBits};
+use tokio_serial::SerialPortBuilderExt;
 use tokio_util::{
     bytes::BytesMut,
     codec::{BytesCodec, Decoder, FramedRead, FramedWrite},
@@ -281,11 +281,12 @@ impl AppState {
             .then_some(&options.name)
             .ok_or(OpenSerialPortError::AlreadyOpen)?;
 
-        let port = tokio_serial::new(port_to_open_name, 115200)
-            .stop_bits(StopBits::One)
-            .data_bits(DataBits::Eight)
-            .flow_control(FlowControl::None)
-            .parity(Parity::None)
+        let port = tokio_serial::new(port_to_open_name, options.baud_rate)
+            .stop_bits(options.stop_bits.into())
+            .data_bits(options.data_bits.into())
+            .flow_control(options.flow_control.into())
+            .parity(options.parity.into())
+            .timeout(options.timeout)
             .open_native_async()?;
 
         let (port_read, port_write) = tokio::io::split(port);

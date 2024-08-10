@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use tokio::sync::{
     mpsc::{error::SendError as TokioSendError, UnboundedSender as MPSCUnboundedSender},
     watch::Sender as WatchSender,
@@ -8,6 +10,34 @@ use crate::core::serial::managed_serial_port::ReadState;
 
 use super::SerialPort;
 
+#[derive(Debug)]
+pub enum DataBits {
+    Five,
+    Six,
+    Seven,
+    Eight,
+}
+
+#[derive(Debug)]
+pub enum FlowControl {
+    None,
+    Software,
+    Hardware,
+}
+
+#[derive(Debug)]
+pub enum Parity {
+    None,
+    Odd,
+    Even,
+}
+
+#[derive(Debug)]
+pub enum StopBits {
+    One,
+    Two,
+}
+
 /// Describes how a given serial port should be open.
 #[derive(Debug)]
 pub struct OpenSerialPortOptions {
@@ -15,7 +45,12 @@ pub struct OpenSerialPortOptions {
     pub name: String,
     /// Defines the [`ReadState`] of a serial port before it is even open.
     pub initial_read_state: ReadState,
-    // TODO: Other fields: BaudRate ...
+    pub baud_rate: u32,
+    pub data_bits: DataBits,
+    pub flow_control: FlowControl,
+    pub parity: Parity,
+    pub stop_bits: StopBits,
+    pub timeout: Duration,
 }
 
 /// Represents a packet that is received from a serial port.
@@ -191,4 +226,53 @@ pub enum SendError {
         #[from]
         TokioSendError<OutgoingPacket>,
     ),
+}
+
+mod impl_tokio_serial {
+    use super::*;
+
+    use tokio_serial::{
+        DataBits as TokioDataBits, FlowControl as TokioFlowControl, Parity as TokioParity,
+        StopBits as TokioStopBits,
+    };
+
+    impl From<DataBits> for TokioDataBits {
+        fn from(data_bits: DataBits) -> Self {
+            match data_bits {
+                DataBits::Five => TokioDataBits::Five,
+                DataBits::Six => TokioDataBits::Six,
+                DataBits::Seven => TokioDataBits::Seven,
+                DataBits::Eight => TokioDataBits::Eight,
+            }
+        }
+    }
+
+    impl From<FlowControl> for TokioFlowControl {
+        fn from(flow_control: FlowControl) -> Self {
+            match flow_control {
+                FlowControl::None => TokioFlowControl::None,
+                FlowControl::Software => TokioFlowControl::Software,
+                FlowControl::Hardware => TokioFlowControl::Hardware,
+            }
+        }
+    }
+
+    impl From<Parity> for TokioParity {
+        fn from(parity: Parity) -> Self {
+            match parity {
+                Parity::None => TokioParity::None,
+                Parity::Odd => TokioParity::Odd,
+                Parity::Even => TokioParity::Even,
+            }
+        }
+    }
+
+    impl From<StopBits> for TokioStopBits {
+        fn from(stop_bits: StopBits) -> Self {
+            match stop_bits {
+                StopBits::One => TokioStopBits::One,
+                StopBits::Two => TokioStopBits::Two,
+            }
+        }
+    }
 }
