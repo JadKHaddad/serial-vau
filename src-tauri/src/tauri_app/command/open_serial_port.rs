@@ -24,10 +24,14 @@ pub async fn open_serial_port_intern(
         .await?;
 
     let app = app.clone();
+    let packets = state.app_state().get_or_create_packets(&name);
+
     tokio::spawn(async move {
         while let Some(packet) = rx.recv().await {
             match packet {
                 Ok(packet) => {
+                    packets.push(&packet);
+
                     let event = PacketEvent {
                         packet: packet.into(),
                     };
