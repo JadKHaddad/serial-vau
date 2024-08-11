@@ -1,29 +1,22 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use parking_lot::RwLock;
 
 use super::model::packet::Packet;
 use crate::core::state::open_serial_port::Packet as CorePacket;
 
-#[derive(Debug, Clone, Default)]
-pub struct State {
-    inner: Arc<StateInner>,
-}
-
-impl Deref for State {
-    type Target = StateInner;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
+/// Intended to save the packets for serial ports and then dump them to a file if needed.
+///
+/// ## Note
+///
+/// - May not be needed for tauri app, since the frontend saves the packets and can send them along a dump command.
+/// - Needed for other types of apps, like ratatui or slint.
 #[derive(Debug, Default)]
-pub struct StateInner {
+pub struct State {
     packets: RwLock<HashMap<String, Packets>>,
 }
 
-impl StateInner {
+impl State {
     /// Get or create a list of packets for a given serial port name.
     pub fn get_or_create_packets(&self, name: &str) -> Packets {
         let mut packets = self.packets.write();

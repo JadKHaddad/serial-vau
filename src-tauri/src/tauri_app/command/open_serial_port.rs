@@ -30,6 +30,7 @@ pub async fn open_serial_port_intern(
         while let Some(packet) = rx.recv().await {
             match packet {
                 Ok(packet) => {
+                    // Note: May not be needed. see `crate::app::state::State`
                     packets.push(&packet);
 
                     let event = PacketEvent {
