@@ -10,12 +10,13 @@
                 <v-card class="d-flex flex-column" style="height: 85vh;"> <!-- FIXME: I don't like this -->
 
                     <v-card-text class="flex-grow-1 overflow-y-auto">
+                        <!-- FIXME: Scrolling up should freeze the list -->
+                        <!-- Currently: when items are appended, all other items are moving up due to the limited number of items to display -->
                         <v-list v-if="limitedPackets(portName)?.length">
                             <v-list-item v-for="(packet, index) in limitedPackets(portName)" :key="index">
-                                <v-list-item-title>{{ packetTitle(packet) }}</v-list-item-title>
-                                <v-list-item-subtitle>{{ new Date(packet.timestampMillis).toLocaleString()
-                                    }}</v-list-item-subtitle>
-                                <v-divider class="mb-1 mt-3"></v-divider>
+                                <!-- <v-list-item-title>{{  }}</v-list-item-title> -->
+                                <v-list-item-subtitle>{{ packetDisplay(packet) }}</v-list-item-subtitle>
+
                             </v-list-item>
                         </v-list>
                     </v-card-text>
@@ -67,26 +68,29 @@ const clearSerialPortValue = (name: string) => {
     portValues.value[name] = ""
 };
 
-const packetTitle = (packet: PacketData) => {
+const packetDisplay = (packet: PacketData) => {
+
+    const time = new Date(packet.timestampMillis).toLocaleString();
+
     if (packet.packetDirection.type === PacketDirectionType.Outgoing) {
         const origin = packet.packetDirection.content.packetOrigin;
 
         if (origin.type === PacketOriginType.Direct) {
-            return `Direct <| ${packet.packetDirection.content.value}`;
+            return `${time}: Direct: ${packet.packetDirection.content.value}`;
         }
 
         if (origin.type === PacketOriginType.Broadcast) {
-            return `Broadcast <| ${packet.packetDirection.content.value}`;
+            return `${time}: Broadcast: ${packet.packetDirection.content.value}`;
         }
 
         if (origin.type === PacketOriginType.Subscription) {
             const from = origin.content.name;
-            return `Subscription(${from}) <| ${packet.packetDirection.content.value}`;
+            return `${time}: Subscription(${from}): ${packet.packetDirection.content.value}`;
         }
     }
 
     if (packet.packetDirection.type === PacketDirectionType.Incoming) {
-        return `|> ${packet.packetDirection.content.line}`;
+        return `${time}: ${packet.packetDirection.content.line}`;
     }
 };
 
