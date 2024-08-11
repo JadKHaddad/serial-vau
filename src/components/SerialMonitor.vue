@@ -8,9 +8,10 @@
         <v-tabs-window v-model="selectedPortIndex">
             <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
                 <v-card class="d-flex flex-column" style="height: 85vh;"> <!-- FIXME: I don't like this -->
+
                     <v-card-text class="flex-grow-1 overflow-y-auto">
-                        <v-list v-if="app.packets[portName]?.length">
-                            <v-list-item v-for="(packet, index) in app.packets[portName]" :key="index">
+                        <v-list v-if="limitedPackets(portName)?.length">
+                            <v-list-item v-for="(packet, index) in limitedPackets(portName)" :key="index">
                                 <v-list-item-title>{{ packetTitle(packet) }}</v-list-item-title>
                                 <v-list-item-subtitle>{{ new Date(packet.timestampMillis).toLocaleString()
                                     }}</v-list-item-subtitle>
@@ -25,6 +26,7 @@
                             @click:append="sendToSerialPortAndClearValue(selectedPort.name, portValues[selectedPort.name])"
                             clearable @click:clear="clearSerialPortValue(selectedPort.name)"></v-text-field>
                     </v-card-actions>
+
                 </v-card>
             </v-tabs-window-item>
         </v-tabs-window>
@@ -40,9 +42,10 @@ import { StatusType } from '@/models/managed-serial-port';
 import { useAppStore } from '@/stores/app';
 
 const app = useAppStore();
+
 const selectedPortIndex = ref<number>(0);
 const portValues = ref<Record<string, string>>({});
-
+const portDisplayPacketsLimits = ref<Record<string, number>>({});
 const portNames = computed(() => Object.keys(app.packets));
 
 const selectedPort = computed(() => {
@@ -51,6 +54,14 @@ const selectedPort = computed(() => {
 
     return selectedPort
 });
+
+const limitedPackets = (portName: string) => {
+    const packetLimit = portDisplayPacketsLimits.value[portName] || 100;
+
+    const data = app.packets[portName]
+
+    return data.slice(Math.max(data.length - packetLimit, 0));
+};
 
 const clearSerialPortValue = (name: string) => {
     portValues.value[name] = ""
