@@ -1,4 +1,3 @@
-use crate::core::state::AppState;
 use anyhow::Context;
 use command::{
     close_serial_port::close_serial_port_intern,
@@ -12,19 +11,22 @@ use command::{
 use error::AppError;
 use event::emit_managed_serial_ports::emit_managed_serial_ports;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
+use state::State as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::core::serial::watcher::Watcher as SerialWatcher;
+use crate::app::state::State as AppState;
+use crate::core::{serial::watcher::Watcher as SerialWatcher, state::State as SerialState};
 
 mod command;
 mod error;
 mod event;
 mod model;
+mod state;
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn get_serial_ports(state: State<AppState>) -> Result<Vec<ManagedSerialPort>, AppError> {
-    get_serial_ports_intern(&state).map_err(Into::into)
+pub fn get_serial_ports(state: State<TauriAppState>) -> Result<Vec<ManagedSerialPort>, AppError> {
+    get_serial_ports_intern(state.serial_state()).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -32,7 +34,7 @@ pub fn get_serial_ports(state: State<AppState>) -> Result<Vec<ManagedSerialPort>
 pub async fn open_serial_port(
     options: OpenSerialPortOptions,
     app: AppHandle,
-    state: State<'_, AppState>,
+    state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
     open_serial_port_intern(options, &app, &state)
         .await
@@ -43,9 +45,9 @@ pub async fn open_serial_port(
 #[tracing::instrument(skip_all)]
 pub async fn close_serial_port(
     name: String,
-    state: State<'_, AppState>,
+    state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    close_serial_port_intern(name, &state)
+    close_serial_port_intern(name, state.serial_state())
         .await
         .map_err(Into::into)
 }
@@ -55,15 +57,15 @@ pub async fn close_serial_port(
 pub fn send_to_serial_port(
     name: String,
     value: String,
-    state: State<'_, AppState>,
+    state: State<'_, TauriAppState>,
 ) -> Result<(), AppError> {
-    send_to_serial_port_intern(name, value.into(), &state).map_err(Into::into)
+    send_to_serial_port_intern(name, value.into(), state.serial_state()).map_err(Into::into)
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
-    send_to_all_serial_ports_intern(value.into(), &state);
+pub fn send_to_all_serial_ports(value: String, state: State<'_, TauriAppState>) {
+    send_to_all_serial_ports_intern(value.into(), state.serial_state());
 }
 
 #[tauri::command]
@@ -71,9 +73,9 @@ pub fn send_to_all_serial_ports(value: String, state: State<'_, AppState>) {
 pub fn subscribe(
     from: &str,
     to: &str,
-    state: State<'_, AppState>,
+    state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    subscribe_intern(from, to, &state).map_err(Into::into)
+    subscribe_intern(from, to, state.serial_state()).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -81,18 +83,18 @@ pub fn subscribe(
 pub fn unsubscribe(
     from: &str,
     to: &str,
-    state: State<'_, AppState>,
+    state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    unsubscribe_intern(from, to, &state).map_err(Into::into)
+    unsubscribe_intern(from, to, state.serial_state()).map_err(Into::into)
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
 pub fn toggle_read_state(
     name: &str,
-    state: State<'_, AppState>,
+    state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    toggle_read_state_intern(name, &state).map_err(Into::into)
+    toggle_read_state_intern(name, state.serial_state()).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -105,12 +107,15 @@ fn do_error() -> Result<(), AppError> {
 /// because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
 /// which is used in [`Watcher`](crate::serial::watcher::Watcher),
 pub fn run() -> anyhow::Result<()> {
-    let state = AppState::default();
-    let state_creation = state.clone();
-    let state_deletion = state.clone();
+    let serial_state = SerialState::default();
+    let serial_state_creation = serial_state.clone();
+    let serial_state_deletion = serial_state.clone();
 
+    let app_state = AppState::default();
+
+    let tauri_app_state = TauriAppState::new(serial_state, app_state);
     tauri::Builder::default()
-        .manage(state)
+        .manage(tauri_app_state)
         .setup(|app| {
             let app_handle_creation = app.app_handle().clone();
             let app_handle_deletion = app.app_handle().clone();
@@ -130,7 +135,7 @@ pub fn run() -> anyhow::Result<()> {
                         Err(err) => {tracing::warn!(%err, "Serial creation event error");}
                     }
 
-                    let _ = emit_managed_serial_ports(&app_handle_creation, &state_creation);
+                    let _ = emit_managed_serial_ports(&app_handle_creation, &serial_state_creation);
                 }
 
                 tracing::debug!("Serial creation events watcher terminated");
@@ -155,7 +160,7 @@ pub fn run() -> anyhow::Result<()> {
                         }
                     }
 
-                    let _ = emit_managed_serial_ports(&app_handle_deletion, &state_deletion);
+                    let _ = emit_managed_serial_ports(&app_handle_deletion, &serial_state_deletion);
                 }
 
                 tracing::debug!("Serial deletion events watcher terminated");

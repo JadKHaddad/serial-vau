@@ -1,11 +1,11 @@
 use crate::{
-    app::model::managed_serial_port::ManagedSerialPort,
-    core::state::{error::ManagedSerialPortsError, AppState},
+    core::state::{error::ManagedSerialPortsError, State},
+    tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
 pub async fn close_serial_port_intern(
     name: String,
-    state: &AppState,
+    state: &State,
 ) -> Result<Vec<ManagedSerialPort>, CloseSerialPortError> {
     tracing::info!(name=%name, "Closing serial port");
 

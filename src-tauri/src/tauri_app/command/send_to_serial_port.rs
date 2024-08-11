@@ -2,13 +2,13 @@ use tokio_util::bytes::Bytes;
 
 use crate::core::state::{
     open_serial_port::{OutgoingPacket, PacketOrigin, SendError},
-    AppState,
+    State,
 };
 
 pub fn send_to_serial_port_intern(
     name: String,
     bytes: Bytes,
-    state: &AppState,
+    state: &State,
 ) -> Result<(), SendToSerialPortError> {
     tracing::info!(name=%name, "Sending to serial port");
 

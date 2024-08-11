@@ -1,12 +1,12 @@
 use crate::{
-    app::model::managed_serial_port::ManagedSerialPort,
-    core::state::{error::ManagedSerialPortsError, AppState},
+    core::state::{error::ManagedSerialPortsError, State},
+    tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
 pub fn subscribe_intern(
     from: &str,
     to: &str,
-    _state: &AppState,
+    _state: &State,
 ) -> Result<Vec<ManagedSerialPort>, SubscribeError> {
     tracing::info!(from=%from, to=%to, "Subscribing");
 
@@ -27,7 +27,7 @@ pub fn subscribe_intern(
 pub fn unsubscribe_intern(
     from: &str,
     to: &str,
-    _state: &AppState,
+    _state: &State,
 ) -> Result<Vec<ManagedSerialPort>, SubscribeError> {
     tracing::info!(from=%from, to=%to, "Unsubscribing");
 

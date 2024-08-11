@@ -1,26 +1,27 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    app::{
+    core::state::error::{ManagedSerialPortsError, OpenSerialPortError as CoreOpenSerialPortError},
+    tauri_app::{
         event::model::packet::PacketEvent,
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
-    },
-    core::state::{
-        error::{ManagedSerialPortsError, OpenSerialPortError as CoreOpenSerialPortError},
-        AppState,
+        state::State as TauriAppState,
     },
 };
 
 pub async fn open_serial_port_intern(
     options: OpenSerialPortOptions,
     app: &AppHandle,
-    state: &AppState,
+    state: &TauriAppState,
 ) -> Result<Vec<ManagedSerialPort>, OpenSerialPortError> {
     tracing::info!(?options, "Opening serial port");
 
     let name = options.name.clone();
 
-    let mut rx = state.open_serial_port(options.into()).await?;
+    let mut rx = state
+        .serial_state()
+        .open_serial_port(options.into())
+        .await?;
 
     let app = app.clone();
     tokio::spawn(async move {
@@ -40,7 +41,7 @@ pub async fn open_serial_port_intern(
         }
     });
 
-    let managed_serial_ports = state.managed_serial_ports()?;
+    let managed_serial_ports = state.serial_state().managed_serial_ports()?;
     let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)

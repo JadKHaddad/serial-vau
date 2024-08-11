@@ -1,10 +1,10 @@
 use crate::{
-    app::model::managed_serial_port::ManagedSerialPort,
-    core::state::{error::ManagedSerialPortsError, AppState},
+    core::state::{error::ManagedSerialPortsError, State},
+    tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
 pub fn get_serial_ports_intern(
-    state: &AppState,
+    state: &State,
 ) -> Result<Vec<ManagedSerialPort>, GetSerialPortsError> {
     tracing::info!("Getting serial ports");
 

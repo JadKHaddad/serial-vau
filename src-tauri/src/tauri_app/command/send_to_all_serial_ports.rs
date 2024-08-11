@@ -2,10 +2,10 @@ use tokio_util::bytes::Bytes;
 
 use crate::core::state::{
     open_serial_port::{OutgoingPacket, PacketOrigin},
-    AppState,
+    State,
 };
 
-pub fn send_to_all_serial_ports_intern(bytes: Bytes, state: &AppState) {
+pub fn send_to_all_serial_ports_intern(bytes: Bytes, state: &State) {
     tracing::info!("Sending to all serial ports");
 
     let packet = OutgoingPacket {

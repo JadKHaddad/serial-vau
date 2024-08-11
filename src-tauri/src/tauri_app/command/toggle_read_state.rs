@@ -1,11 +1,11 @@
 use crate::{
-    app::model::managed_serial_port::ManagedSerialPort,
-    core::state::{error::ManagedSerialPortsError, AppState},
+    core::state::{error::ManagedSerialPortsError, State},
+    tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
 pub fn toggle_read_state_intern(
     name: &str,
-    state: &AppState,
+    state: &State,
 ) -> Result<Vec<ManagedSerialPort>, ToggleReadStateError> {
     tracing::info!(name=%name, "Toggling read state");
 

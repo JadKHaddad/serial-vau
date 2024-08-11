@@ -27,12 +27,12 @@ pub mod error;
 pub mod open_serial_port;
 
 #[derive(Debug, Clone, Default)]
-pub struct AppState {
-    inner: Arc<AppStateInner>,
+pub struct State {
+    inner: Arc<StateInner>,
 }
 
-impl Deref for AppState {
-    type Target = AppStateInner;
+impl Deref for State {
+    type Target = StateInner;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -55,7 +55,7 @@ type Subscriptions = HashMap<String, HashMap<String, Option<TxHandle>>>;
 /// ## Note
 /// Locks are not optimized. See branch [`feat/optimize-locks`](https://github.com/JadKHaddad/serial-vau/tree/feat/optimize-locks) for optimized locks sacrificing readability.
 #[derive(Debug, Default)]
-pub struct AppStateInner {
+pub struct StateInner {
     /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
     /// which is used in [`Watcher`](super::serial::watcher::Watcher),
     /// which is used in [`run`](crate::app::run).
@@ -73,7 +73,7 @@ pub struct AppStateInner {
     subscriptions: Arc<RwLock<Subscriptions>>,
 }
 
-impl AppStateInner {
+impl StateInner {
     /// ## Locks
     ///
     /// - Read: [`Self::open_serial_ports`]
@@ -336,14 +336,14 @@ impl AppStateInner {
     }
 }
 
-impl AppState {
+impl State {
     /// ## Locks
     ///
-    /// - Write: [`AppStateInner::open_serial_ports`]. Inherited from [`AppStateInner::add_open_serial_port`].
+    /// - Write: [`StateInner::open_serial_ports`]. Inherited from [`StateInner::add_open_serial_port`].
     #[cfg_attr(
         feature = "subscriptions",
         doc = "
-- Write: [`AppStateInner::subscriptions`]. Inherited from [`AppStateInner::add_open_serial_port`].
+- Write: [`StateInner::subscriptions`]. Inherited from [`StateInner::add_open_serial_port`].
     "
     )]
     pub async fn open_serial_port(

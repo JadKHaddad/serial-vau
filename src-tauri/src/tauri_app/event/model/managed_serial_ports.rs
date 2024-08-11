@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::app::model::managed_serial_port::ManagedSerialPort;
+use crate::tauri_app::model::managed_serial_port::ManagedSerialPort;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -22,5 +22,5 @@ fn main() -> anyhow::Result<()> {
 
     init_tracing()?;
 
-    serial_vau::app::run()
+    serial_vau::tauri_app::run()
 }

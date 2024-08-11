@@ -1,13 +1,13 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    app::event::model::managed_serial_ports::ManagedSerialPortsEvent,
-    core::state::{error::ManagedSerialPortsError, AppState},
+    core::state::{error::ManagedSerialPortsError, State},
+    tauri_app::event::model::managed_serial_ports::ManagedSerialPortsEvent,
 };
 
 pub fn emit_managed_serial_ports(
     app: &AppHandle,
-    state: &AppState,
+    state: &State,
 ) -> Result<(), EmitManagedSerialPortsError> {
     tracing::info!("Emitting serial ports");
 
