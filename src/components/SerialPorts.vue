@@ -1,5 +1,5 @@
 <template>
-    <v-container>
+    <v-container class="mt-4">
         <v-list class="mb-4">
             <v-list-item v-for="(port, _) in app.managedSerialPorts" :key="port.name">
                 <SerialPort :port="port"></SerialPort>

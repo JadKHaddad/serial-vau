@@ -1,56 +1,56 @@
 <template>
-
-    <v-tabs v-model="selectedPortIndex" background-color="primary" dark>
-        <v-tab v-for="portName in portNames" :key="portName">
-            <v-row align="center">
-                <v-col cols="auto">
-                    <p class="text-subtitle-2">
-                        {{ portName }}
-                    </p>
-                </v-col>
-                <v-col v-if="findManagedPort(portName)">
-                    <v-icon :color="findManagedPort(portName)?.status.type === StatusType.Open ? 'green' : 'red'"
-                        :size="16">
-                        {{ findManagedPort(portName)?.status.type === StatusType.Open ? 'mdi-check-circle' :
-                            'mdi-close-circle'
-                        }}
-                    </v-icon>
-                </v-col>
-            </v-row>
-
-        </v-tab>
-    </v-tabs>
-    <v-tabs-window v-model="selectedPortIndex">
-        <v-container>
+    <v-container>
+        <v-tabs v-model="selectedPortIndex" background-color="primary" dark>
+            <v-tab v-for="portName in portNames" :key="portName">
+                <v-row align="center">
+                    <v-col cols="auto">
+                        <p class="text-subtitle-2">
+                            {{ portName }}
+                        </p>
+                    </v-col>
+                    <v-col v-if="findManagedPort(portName)">
+                        <v-icon :color="findManagedPort(portName)?.status.type === StatusType.Open ? 'green' : 'red'"
+                            :size="16">
+                            {{ findManagedPort(portName)?.status.type === StatusType.Open ? 'mdi-check-circle' :
+                                'mdi-close-circle'
+                            }}
+                        </v-icon>
+                    </v-col>
+                </v-row>
+            </v-tab>
+        </v-tabs>
+        <v-tabs-window v-model="selectedPortIndex">
             <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
-                <SerialPort v-if="selectedPort" :port="selectedPort"></SerialPort>
+                <v-container class="mt-4">
+                    <v-row>
+                        <SerialPort v-if="selectedPort" :port="selectedPort"></SerialPort>
+                    </v-row>
 
-                <v-card class="d-flex flex-column" style="height: 65vh;"> <!-- FIXME: I don't like this -->
-                    <v-card-text class="flex-grow-1 overflow-y-auto">
+                    <v-row class="flex-column" style="max-height: 70vh;">
                         <!-- FIXME: Scrolling up should freeze the list -->
                         <!-- Currently: when items are appended, all other items are moving up due to the limited number of items to display -->
                         <v-list v-if="limitedPackets(portName)?.length">
                             <v-list-item v-for="(packet, index) in limitedPackets(portName)" :key="index">
                                 <!-- <v-list-item-title>{{  }}</v-list-item-title> -->
                                 <v-list-item-subtitle>{{ packetDisplay(packet) }}</v-list-item-subtitle>
-
                             </v-list-item>
                         </v-list>
-                    </v-card-text>
+                    </v-row>
 
-                    <v-card-actions v-if="selectedPort?.status.type === StatusType.Open">
+                    <v-row v-if="selectedPort && selectedPort.status.type === StatusType.Open">
                         <v-text-field v-model="portValues[selectedPort.name]" label="Send value"
                             :append-icon="portValues[selectedPort.name] ? 'mdi-send' : ''"
                             @click:append="sendToSerialPortAndClearValue(selectedPort.name, portValues[selectedPort.name])"
-                            clearable @click:clear="clearSerialPortValue(selectedPort.name)"></v-text-field>
-                    </v-card-actions>
-                </v-card>
+                            clearable @click:clear="clearSerialPortValue(selectedPort.name)">
+                        </v-text-field>
+                    </v-row>
 
+                </v-container>
             </v-tabs-window-item>
-        </v-container>
-    </v-tabs-window>
-
+        </v-tabs-window>
+    </v-container>
 </template>
+
 
 <script lang="ts" setup>
 // TODO: auto scroll
