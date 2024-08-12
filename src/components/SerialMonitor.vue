@@ -1,14 +1,16 @@
 <template>
-    <v-container>
-        <v-tabs v-model="selectedPortIndex" background-color="primary" dark>
-            <v-tab v-for="portName in portNames" :key="portName">
-                {{ portName }}
-            </v-tab>
-        </v-tabs>
-        <v-tabs-window v-model="selectedPortIndex">
-            <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
-                <v-card class="d-flex flex-column" style="height: 85vh;"> <!-- FIXME: I don't like this -->
 
+    <v-tabs v-model="selectedPortIndex" background-color="primary" dark>
+        <v-tab v-for="portName in portNames" :key="portName">
+            {{ portName }}
+        </v-tab>
+    </v-tabs>
+    <v-tabs-window v-model="selectedPortIndex">
+        <v-container>
+            <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
+                <SerialPort v-if="selectedPort" :port="selectedPort"></SerialPort>
+
+                <v-card class="d-flex flex-column" style="height: 60vh;"> <!-- FIXME: I don't like this -->
                     <v-card-text class="flex-grow-1 overflow-y-auto">
                         <!-- FIXME: Scrolling up should freeze the list -->
                         <!-- Currently: when items are appended, all other items are moving up due to the limited number of items to display -->
@@ -27,11 +29,12 @@
                             @click:append="sendToSerialPortAndClearValue(selectedPort.name, portValues[selectedPort.name])"
                             clearable @click:clear="clearSerialPortValue(selectedPort.name)"></v-text-field>
                     </v-card-actions>
-
                 </v-card>
+
             </v-tabs-window-item>
-        </v-tabs-window>
-    </v-container>
+        </v-container>
+    </v-tabs-window>
+
 </template>
 
 <script lang="ts" setup>

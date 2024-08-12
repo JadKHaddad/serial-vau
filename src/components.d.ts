@@ -12,6 +12,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SerialMonitor: typeof import('./components/SerialMonitor.vue')['default']
+    SerialPort: typeof import('./components/serial-port/SerialPort.vue')['default']
     SerialPorts: typeof import('./components/SerialPorts.vue')['default']
   }
 }
