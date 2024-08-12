@@ -2,7 +2,22 @@
 
     <v-tabs v-model="selectedPortIndex" background-color="primary" dark>
         <v-tab v-for="portName in portNames" :key="portName">
-            {{ portName }}
+            <v-row align="center">
+                <v-col cols="auto">
+                    <p class="text-subtitle-2">
+                        {{ portName }}
+                    </p>
+                </v-col>
+                <v-col v-if="findManagedPort(portName)">
+                    <v-icon :color="findManagedPort(portName)?.status.type === StatusType.Open ? 'green' : 'red'"
+                        :size="16">
+                        {{ findManagedPort(portName)?.status.type === StatusType.Open ? 'mdi-check-circle' :
+                            'mdi-close-circle'
+                        }}
+                    </v-icon>
+                </v-col>
+            </v-row>
+
         </v-tab>
     </v-tabs>
     <v-tabs-window v-model="selectedPortIndex">
@@ -10,7 +25,7 @@
             <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
                 <SerialPort v-if="selectedPort" :port="selectedPort"></SerialPort>
 
-                <v-card class="d-flex flex-column" style="height: 60vh;"> <!-- FIXME: I don't like this -->
+                <v-card class="d-flex flex-column" style="height: 65vh;"> <!-- FIXME: I don't like this -->
                     <v-card-text class="flex-grow-1 overflow-y-auto">
                         <!-- FIXME: Scrolling up should freeze the list -->
                         <!-- Currently: when items are appended, all other items are moving up due to the limited number of items to display -->
@@ -58,6 +73,10 @@ const selectedPort = computed(() => {
 
     return selectedPort
 });
+
+const findManagedPort = (portName: string) => {
+    return app.managedSerialPorts.find(port => port.name === portName) || null;
+};
 
 const limitedPackets = (portName: string) => {
     const packetLimit = portDisplayPacketsLimits.value[portName] || 100;

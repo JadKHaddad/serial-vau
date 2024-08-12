@@ -1,36 +1,51 @@
 <template>
-    <v-card>
-        <v-row class="mb-4" align="center">
+    <v-vontainer>
+        <v-row align="center">
             <v-col cols="auto">
-                <v-card-title>{{ port.name }}</v-card-title>
+                <p class="text-subtitle-1">
+                    {{ port.name }}
+                </p>
             </v-col>
-            <v-icon :color="port.status.type === StatusType.Open ? 'green' : 'red'" :size="16">
-                {{ port.status.type === StatusType.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
-            </v-icon>
-            <v-icon v-if="port.status.type === StatusType.Open && port.status.content.readState"
-                :color="port.status.content?.readState === ReadState.Read ? 'green' : 'red'" :size="16" class="ml-2">
-                {{ port.readState === ReadState.Read ? 'mdi-play-circle-outline' :
-                    'mdi-stop-circle-outline' }}
-            </v-icon>
+            <v-col>
+                <v-icon :color="port.status.type === StatusType.Open ? 'green' : 'red'" :size="16">
+                    {{ port.status.type === StatusType.Open ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                </v-icon>
+                <v-icon v-if="port.status.type === StatusType.Open && port.status.content.readState"
+                    :color="port.status.content?.readState === ReadState.Read ? 'green' : 'red'" :size="16"
+                    class="ml-2">
+                    {{ port.readState === ReadState.Read ? 'mdi-play-circle-outline' :
+                        'mdi-stop-circle-outline' }}
+                </v-icon>
+            </v-col>
+        </v-row>
+        <v-row v-if="port.subscriptions.length > 0">
+            <v-col cols="auto">
+                <p class="text-subtitle-1">
+                    Subscriptions
+                </p>
+            </v-col>
+            <v-col>
+                <v-chip class="mr-4" v-for="(subscription, subIndex) in port.subscriptions" :key="subIndex" closable
+                    size="small" v-on:click:close="unsubscribe(port.name, subscription)">
+                    {{ subscription }}
+                </v-chip>
+            </v-col>
+        </v-row>
+        <v-row v-if="port.subscribedTo.length > 0">
+            <v-col cols="auto">
+                <p class="text-subtitle-1">
+                    Subscribed To
+                </p>
+            </v-col>
+            <v-col>
+                <v-chip class="mr-4" v-for="(subscribed, subToIndex) in port.subscribedTo" :key="subToIndex" closable
+                    size="small" v-on:click:close="unsubscribe(subscribed, port.name)">
+                    {{ subscribed }}
+                </v-chip>
+            </v-col>
         </v-row>
 
-        <v-card-subtitle v-if="port.subscriptions.length > 0" class="mb-4">Subscriptions</v-card-subtitle>
-        <v-chip-group>
-            <v-chip class="mb-4" v-for="(subscription, subIndex) in port.subscriptions" :key="subIndex" closable
-                v-on:click:close="unsubscribe(port.name, subscription)">
-                {{ subscription }}
-            </v-chip>
-        </v-chip-group>
-
-        <v-card-subtitle v-if="port.subscribedTo.length > 0" class="mb-4">Subscribed To</v-card-subtitle>
-        <v-chip-group>
-            <v-chip class="mb-4" v-for="(subscribed, subToIndex) in port.subscribedTo" :key="subToIndex"
-                v-on:click:close="unsubscribe(subscribed, port.name)" closable>
-                {{ subscribed }}
-            </v-chip>
-        </v-chip-group>
-
-        <v-card-actions class="mb-4">
+        <v-row class="mb-4">
             <v-menu>
                 <template v-slot:activator="{ props }">
                     <v-btn v-bind="props" variant="plain">
@@ -44,7 +59,7 @@
                     </v-list-item>
                 </v-list>
             </v-menu>
-            <!-- TODO: display options -->
+
             <v-btn @click="openSerialPort({
                 name: port.name,
                 initialReadState: ReadState.Read,
@@ -66,8 +81,8 @@
             <v-btn @click="toggleReadState" variant="plain">
                 Toggle Read
             </v-btn>
-        </v-card-actions>
-    </v-card>
+        </v-row>
+    </v-vontainer>
 </template>
 
 <script lang="ts" setup>
