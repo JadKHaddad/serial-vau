@@ -1,3 +1,4 @@
+// TODO: the small esp32-c3 with micro usb is not detected by this watcher (using: https://github.com/esp-rs/esp-hal/blob/v0.20.0/examples/src/bin/embassy_serial.rs)
 use std::{collections::HashMap, time::Duration};
 
 use serde::Deserialize;
