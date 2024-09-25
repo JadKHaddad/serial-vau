@@ -53,7 +53,7 @@ const packetData = (packet: PacketData): PacketDataType => {
   let from: string | Date | undefined = undefined;
 
   if (packet.packetDirection.type === PacketDirectionType.Incoming) {
-    return getPacketData(time, "", "Incoming");
+    return getPacketData(time, packet.packetDirection.content.line, "Incoming");
   }
 
   const origin: PacketOrigin = packet.packetDirection.content.packetOrigin;

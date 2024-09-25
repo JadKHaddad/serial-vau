@@ -97,7 +97,7 @@ const isPortOpen = (portName: string): boolean => {
 };
 
 const limitedPackets = (portName: string) => {
-  const packetLimit = portDisplayPacketsLimits.value[portName];
+  const packetLimit = portDisplayPacketsLimits.value[portName] || 100;
 
   const data = app.packets[portName];
 

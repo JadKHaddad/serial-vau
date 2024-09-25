@@ -23,8 +23,8 @@ export type PacketDataType = {
 enum PacketOriginColor {
   direct = "green",
   broadcast = "brown",
-  subscription = "green",
-  icoming = "yellow",
+  subscription = "#c1903c",
+  incoming = "#3c83c1",
 }
 
 const props = defineProps<{ packet: PacketDataType }>();

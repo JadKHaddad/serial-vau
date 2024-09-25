@@ -21,7 +21,6 @@ export type ManagedSerialPort = {
     status: Status;
     subscriptions: string[];
     subscribedTo: string[];
-    readState: ReadState,
 }
 
 export type IncomigPacket = {
