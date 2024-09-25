@@ -1,5 +1,5 @@
 <template>
-    <v-vontainer>
+    <v-container>
         <v-row align="center">
             <v-col cols="auto">
                 <p class="text-subtitle-1">
@@ -13,7 +13,7 @@
                 <v-icon v-if="port.status.type === StatusType.Open && port.status.content.readState"
                     :color="port.status.content?.readState === ReadState.Read ? 'green' : 'red'" :size="16"
                     class="ml-2">
-                    {{ port.readState === ReadState.Read ? 'mdi-play-circle-outline' :
+                    {{ port.status.content.readState === ReadState.Read ? 'mdi-play-circle-outline' :
                         'mdi-stop-circle-outline' }}
                 </v-icon>
             </v-col>
@@ -82,7 +82,7 @@
                 Toggle Read
             </v-btn>
         </v-row>
-    </v-vontainer>
+    </v-container>
 </template>
 
 <script lang="ts" setup>
