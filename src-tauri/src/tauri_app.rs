@@ -10,13 +10,11 @@ use command::{
 };
 use error::AppError;
 use event::emit_managed_serial_ports::emit_managed_serial_ports;
-use futures::StreamExt;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use state::State as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::core::{serial::watcher::Watcher as SerialWatcher, state::State as SerialState};
-use crate::{app::state::State as AppState, core::serial::watcher::SerialEventType};
+use crate::{app::state::State as AppState, core::state::State as SerialState};
 
 mod command;
 mod error;
@@ -130,45 +128,51 @@ pub fn run() -> anyhow::Result<()> {
     tauri::Builder::default()
         .manage(tauri_app_state)
         .setup(|app| {
-            let app_handle = app.app_handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let pool = tokio_util::task::LocalPoolHandle::new(1);
+            #[cfg(windows)]
+            {
+                use crate::core::serial::watcher::windows::{SerialEventType, Watcher as SerialWatcher};
+                use futures::StreamExt;
 
-                let _ = pool
-                    .spawn_pinned(|| async move {
-                        let watcher = SerialWatcher::new()?;
-                        let mut stream = std::pin::pin!(watcher.serial_port_events_stream()?);
+                let app_handle = app.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let pool = tokio_util::task::LocalPoolHandle::new(1);
 
-                        tracing::debug!("Starting serial events watcher");
+                    let _ = pool
+                        .spawn_pinned(|| async move {
+                            let watcher = SerialWatcher::new()?;
+                            let mut stream = std::pin::pin!(watcher.serial_port_events_stream()?);
 
-                        while let Some(event) = stream.next().await {
-                            match event {
-                                Err(err) => {
-                                    tracing::warn!(%err, "Serial event error");
-                                    // TODO: Emit error and break
+                            tracing::debug!("Starting serial events watcher");
 
-                                    break;
+                            while let Some(event) = stream.next().await {
+                                match event {
+                                    Err(err) => {
+                                        tracing::warn!(%err, "Serial event error");
+                                        
+                                        // TODO: Emit error and break
+
+                                        break;
+                                    }
+                                    Ok(event) => match event.event_type {
+                                        SerialEventType::Creation => {
+                                            tracing::trace!(name=%event.serial_port.name(), "Serial creation event detected");
+                                        }
+                                        SerialEventType::Deletion => {
+                                            tracing::trace!(name=%event.serial_port.name(), "Serial deletion event detected");
+                                        }
+                                    },
                                 }
-                                Ok(event) => match event.event_type {
-                                    SerialEventType::Creation => {
-                                        tracing::trace!(name=%event.serial_port.name(), "Serial creation event detected");
-                                    }
-                                    SerialEventType::Deletion => {
-                                        tracing::trace!(name=%event.serial_port.name(), "Serial deletion event detected");
-                                    }
-                                },
+
+                                let _ = emit_managed_serial_ports(&app_handle, &serial_state_watcher).await;
                             }
 
-                            let _ = emit_managed_serial_ports(&app_handle, &serial_state_watcher).await;
-                        }
+                            tracing::debug!("Serial events watcher terminated");
 
-                        tracing::debug!("Serial events watcher terminated");
-
-                        anyhow::Result::<()>::Ok(())
-                    })
-                    .await;
-            });
-
+                            anyhow::Result::<()>::Ok(())
+                        })
+                        .await;
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
