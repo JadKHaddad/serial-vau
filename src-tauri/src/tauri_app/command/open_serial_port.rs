@@ -1,7 +1,10 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    core::state::error::{ManagedSerialPortsError, OpenSerialPortError as CoreOpenSerialPortError},
+    core::state::error::{
+        IncomingPacketError, ManagedSerialPortsError,
+        OpenSerialPortError as CoreOpenSerialPortError, PacketError,
+    },
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
@@ -49,7 +52,13 @@ pub async fn open_serial_port_intern(
                     // Emit changed to the ui. The Error may be due to the port being closed.
                     // Or the device may have not been detected by the watcher.
 
-                    let _ = emit_managed_serial_ports(&app, &serial_state).await;
+                    match err {
+                        // Decoding lines error will not break the read loop in `State.open_serial_port`.
+                        PacketError::Incoming(IncomingPacketError::Codec(..)) => {}
+                        _ => {
+                            let _ = emit_managed_serial_ports(&app, &serial_state).await;
+                        }
+                    }
                 }
             }
         }

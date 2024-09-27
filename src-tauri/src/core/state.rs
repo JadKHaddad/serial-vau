@@ -457,7 +457,6 @@ impl State {
                                                         }
                                                     }
 
-
                                                     lines_bytes.extend_from_slice(&bytes);
 
                                                     loop {
