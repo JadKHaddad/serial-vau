@@ -129,62 +129,81 @@ impl Watcher {
 
 #[cfg(test)]
 mod test {
-    use futures::StreamExt;
+    use std::pin::pin;
+
+    use futures::{stream::select, StreamExt};
 
     use super::*;
 
+    #[derive(Debug)]
+    struct SerialEvent {
+        event_type: SerialEventType,
+        port_name: String,
+    }
+
+    #[derive(Debug)]
+    enum SerialEventType {
+        Creation,
+        Deletion,
+    }
+
     #[tokio::test]
     #[ignore]
-    // cargo test --package serial-vau --lib -- serial::watcher::test::watch --exact --show-output --ignored --nocapture
+    // cargo test --package serial-vau --lib -- core::serial::watcher::test::watch --exact --show-output --ignored --nocapture
     async fn watch() {
-        let com_con = COMLibrary::new().expect("Failed to create COM library");
-        let wmi_con = WMIConnection::new(com_con).expect("Failed to create WMI connection");
+        let pool = tokio_util::task::LocalPoolHandle::new(4);
 
-        let mut filters = HashMap::<String, FilterValue>::new();
+        pool.spawn_pinned(|| {
+            let com_con = COMLibrary::new().expect("Failed to create COM library");
+            let wmi_con = WMIConnection::new(com_con).expect("Failed to create WMI connection");
 
-        filters.insert(
-            "TargetInstance".to_owned(),
-            FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
-        );
+            let mut filters = HashMap::<String, FilterValue>::new();
 
-        let mut deletion_stream = wmi_con
-            .async_filtered_notification::<SerialDeletion>(
-                &filters,
-                Some(Duration::from_millis(300)),
-            )
-            .expect("Failed to create deletion stream");
+            filters.insert(
+                "TargetInstance".to_owned(),
+                FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
+            );
 
-        let mut filters = HashMap::<String, FilterValue>::new();
+            let deletion_stream = wmi_con
+                .async_filtered_notification::<SerialDeletion>(
+                    &filters,
+                    Some(Duration::from_millis(300)),
+                )
+                .expect("Failed to create deletion stream")
+                .filter_map(|event| async move { event.ok() })
+                .map(|event| SerialEvent {
+                    event_type: SerialEventType::Deletion,
+                    port_name: event.target_instance.name,
+                });
 
-        filters.insert(
-            "TargetInstance".to_owned(),
-            FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
-        );
+            let mut filters = HashMap::<String, FilterValue>::new();
 
-        let mut creation_stream = wmi_con
-            .async_filtered_notification::<SerialCreation>(
-                &filters,
-                Some(Duration::from_millis(300)),
-            )
-            .expect("Failed to create creation stream");
+            filters.insert(
+                "TargetInstance".to_owned(),
+                FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
+            );
 
-        loop {
-            tokio::select! {
-                deletion_event =  deletion_stream.next() => {
-                    let Some(Ok(deletion_event)) = deletion_event else {
-                        break;
-                    };
+            let creation_stream = wmi_con
+                .async_filtered_notification::<SerialCreation>(
+                    &filters,
+                    Some(Duration::from_millis(300)),
+                )
+                .expect("Failed to create creation stream")
+                .filter_map(|event| async move { event.ok() })
+                .map(|event| SerialEvent {
+                    event_type: SerialEventType::Creation,
+                    port_name: event.target_instance.name,
+                });
 
-                    println!("{deletion_event:?}");
-                },
-                creation_event =  creation_stream.next() => {
-                    let Some(Ok(creation_event)) = creation_event else {
-                        break;
-                    };
+            async move {
+                let mut stream = pin!(select(deletion_stream, creation_stream));
 
-                    println!("{creation_event:?}");
-                },
+                while let Some(event) = stream.next().await {
+                    println!("{event:?}");
+                }
             }
-        }
+        })
+        .await
+        .unwrap();
     }
 }
