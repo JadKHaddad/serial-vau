@@ -8,8 +8,10 @@
 
         <v-text-field v-model="broadcastValue" label="Enter value to send to all ports"
             :append-icon="broadcastValue ? 'mdi-send' : ''"
+            @keydown.enter.prevent="sendToAllSerialPortsAndClearBroadcastValue(broadcastValue)"
             @click:append="sendToAllSerialPortsAndClearBroadcastValue(broadcastValue)" clearable
-            @click:clear="clearBroadcastValue"></v-text-field>
+            @click:clear="clearBroadcastValue">
+        </v-text-field>
     </v-container>
 </template>
 

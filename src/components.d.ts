@@ -9,6 +9,11 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppDrawer: typeof import('./components/AppDrawer.vue')['default']
     AppFooter: typeof import('./components/AppFooter.vue')['default']
+    COMTabItem: typeof import('./components/com/COMTabItem.vue')['default']
+    MessageBox: typeof import('./components/com/MessageBox.vue')['default']
+    MessageList: typeof import('./components/com/MessageList.vue')['default']
+    MessageListItem: typeof import('./components/com/MessageListItem.vue')['default']
+    NewSerialPortPage: typeof import('./components/com/newSerialPortPage.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SerialMonitor: typeof import('./components/SerialMonitor.vue')['default']
