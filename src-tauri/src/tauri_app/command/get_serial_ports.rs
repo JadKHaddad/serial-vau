@@ -3,12 +3,12 @@ use crate::{
     tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
-pub fn get_serial_ports_intern(
+pub async fn get_serial_ports_intern(
     state: &State,
 ) -> Result<Vec<ManagedSerialPort>, GetSerialPortsError> {
     tracing::info!("Getting serial ports");
 
-    let managed_serial_ports = state.managed_serial_ports()?;
+    let managed_serial_ports = state.managed_serial_ports().await?;
 
     tracing::debug!(?managed_serial_ports);
 

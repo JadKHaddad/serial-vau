@@ -3,7 +3,7 @@ use crate::{
     tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
-pub fn toggle_read_state_intern(
+pub async fn toggle_read_state_intern(
     name: &str,
     state: &State,
 ) -> Result<Vec<ManagedSerialPort>, ToggleReadStateError> {
@@ -11,9 +11,10 @@ pub fn toggle_read_state_intern(
 
     state
         .toggle_read_state(name)
+        .await
         .ok_or(ToggleReadStateError::NotOpen)?;
 
-    let managed_serial_ports = state.managed_serial_ports()?;
+    let managed_serial_ports = state.managed_serial_ports().await?;
     let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)

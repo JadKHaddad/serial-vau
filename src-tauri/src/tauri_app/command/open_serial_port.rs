@@ -1,9 +1,12 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    core::state::error::{ManagedSerialPortsError, OpenSerialPortError as CoreOpenSerialPortError},
+    core::state::error::{
+        IncomingPacketError, ManagedSerialPortsError,
+        OpenSerialPortError as CoreOpenSerialPortError, PacketError,
+    },
     tauri_app::{
-        event::model::packet::PacketEvent,
+        event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
         state::State as TauriAppState,
     },
@@ -24,14 +27,17 @@ pub async fn open_serial_port_intern(
         .await?;
 
     let app = app.clone();
-    let packets = state.app_state().get_or_create_packets(&name);
+    let packets = state.app_state().get_or_create_packets(&name).await;
 
+    let serial_state = state.serial_state().clone();
     tokio::spawn(async move {
+        tracing::debug!(name=%name, "Read events task started");
+
         while let Some(packet) = rx.recv().await {
             match packet {
                 Ok(packet) => {
                     // Note: May not be needed. see `crate::app::state::State`
-                    packets.push(&packet);
+                    packets.push(&packet).await;
 
                     let event = PacketEvent {
                         packet: packet.into(),
@@ -41,12 +47,26 @@ pub async fn open_serial_port_intern(
                 }
                 Err(err) => {
                     tracing::error!(%err, from=%name, "Error receiving data");
+
+                    // The watcher should detect if the port was closed and notify the ui.
+                    // Emit changed to the ui. The Error may be due to the port being closed.
+                    // Or the device may have not been detected by the watcher.
+
+                    match err {
+                        // Decoding lines error will not break the read loop in `State.open_serial_port`.
+                        PacketError::Incoming(IncomingPacketError::Codec(..)) => {}
+                        _ => {
+                            let _ = emit_managed_serial_ports(&app, &serial_state).await;
+                        }
+                    }
                 }
             }
         }
+
+        tracing::debug!(name=%name, "Read events task terminated");
     });
 
-    let managed_serial_ports = state.serial_state().managed_serial_ports()?;
+    let managed_serial_ports = state.serial_state().managed_serial_ports().await?;
     let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)

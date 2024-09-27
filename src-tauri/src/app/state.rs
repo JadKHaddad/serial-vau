@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use parking_lot::RwLock;
+use tokio::sync::RwLock;
 
 use super::model::packet::Packet;
 use crate::core::state::open_serial_port::Packet as CorePacket;
@@ -18,8 +18,8 @@ pub struct State {
 
 impl State {
     /// Get or create a list of packets for a given serial port name.
-    pub fn get_or_create_packets(&self, name: &str) -> Packets {
-        let mut packets = self.packets.write();
+    pub async fn get_or_create_packets(&self, name: &str) -> Packets {
+        let mut packets = self.packets.write().await;
 
         packets.entry(name.to_string()).or_default().clone()
     }
@@ -31,12 +31,12 @@ pub struct Packets {
 }
 
 impl Packets {
-    pub fn push(&self, packet: &CorePacket) {
+    pub async fn push(&self, packet: &CorePacket) {
         let packet = Packet {
             packet_direction: packet.packet_direction.clone(),
             timestamp_millis: packet.timestamp_millis,
         };
 
-        self.packets.write().push(packet);
+        self.packets.write().await.push(packet);
     }
 }

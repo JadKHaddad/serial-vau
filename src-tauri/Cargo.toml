@@ -26,12 +26,13 @@ thiserror = "1.0.63"
 anyhow = "1.0.86"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-tokio-util = { version = "0.7.11", features = ["codec"] }
+tokio-util = { version = "0.7.11", features = ["codec", "rt"] }
 tokio-serial = "5.4.4"
-wmi = "0.13.3"
-parking_lot = "0.12.3"
 futures = "0.3.0"
 chrono = "0.4.38"
+
+[target.'cfg(windows)'.dependencies]
+wmi = "0.14.0"
 
 [patch.crates-io]
 mio-serial = { git = "https://github.com/JadKHaddad/mio-serial.git", branch = "stop-bits-unwrap-or-one" }

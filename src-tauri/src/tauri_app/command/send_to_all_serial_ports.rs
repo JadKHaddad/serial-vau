@@ -5,7 +5,7 @@ use crate::core::state::{
     State,
 };
 
-pub fn send_to_all_serial_ports_intern(bytes: Bytes, state: &State) {
+pub async fn send_to_all_serial_ports_intern(bytes: Bytes, state: &State) {
     tracing::info!("Sending to all serial ports");
 
     let packet = OutgoingPacket {
@@ -13,5 +13,5 @@ pub fn send_to_all_serial_ports_intern(bytes: Bytes, state: &State) {
         packet_origin: PacketOrigin::Broadcast,
     };
 
-    state.send_to_all_open_serial_ports(packet)
+    state.send_to_all_open_serial_ports(packet).await
 }
