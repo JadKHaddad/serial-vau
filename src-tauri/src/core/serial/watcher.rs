@@ -26,12 +26,6 @@ pub struct Win32SerialPortEvent {
     name: String,
 }
 
-impl From<Win32SerialPortEvent> for SerialPort {
-    fn from(value: Win32SerialPortEvent) -> Self {
-        Self::new(value.name)
-    }
-}
-
 #[derive(Deserialize, Debug)]
 #[serde(rename = "__InstanceDeletionEvent")]
 #[serde(rename_all = "PascalCase")]
