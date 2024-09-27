@@ -88,7 +88,7 @@
 <script lang="ts" setup>
 import { StatusType, ReadState } from '@/models/managed-serial-port';
 import { useAppStore } from '@/stores/app';
-import { OpenSerialPortOptions, DataBits, FlowControl, Parity, StopBits } from '@/models/open-options';
+import { DataBits, FlowControl, Parity, StopBits } from '@/models/open-options';
 import { ManagedSerialPort } from '@/models/managed-serial-port';
 
 const props = defineProps<{
@@ -96,22 +96,11 @@ const props = defineProps<{
 }>()
 
 const app = useAppStore()
-
-const openSerialPort = (options: OpenSerialPortOptions) => {
-    app.openSerialPort(options);
-}
+const {unsubscribe, subscribe, openSerialPort} = app;
 
 const closeSerialPort = () => {
     app.closeSerialPort(props.port.name);
 }
-
-const subscribe = (from: string, to: string) => {
-    app.subscribe(from, to);
-};
-
-const unsubscribe = (from: string, to: string) => {
-    app.unsubscribe(from, to);
-};
 
 const toggleReadState = () => {
     app.toggleReadState(props.port.name);
