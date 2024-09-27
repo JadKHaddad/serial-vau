@@ -24,14 +24,14 @@ pub async fn open_serial_port_intern(
         .await?;
 
     let app = app.clone();
-    let packets = state.app_state().get_or_create_packets(&name);
+    let packets = state.app_state().get_or_create_packets(&name).await;
 
     tokio::spawn(async move {
         while let Some(packet) = rx.recv().await {
             match packet {
                 Ok(packet) => {
                     // Note: May not be needed. see `crate::app::state::State`
-                    packets.push(&packet);
+                    packets.push(&packet).await;
 
                     let event = PacketEvent {
                         packet: packet.into(),
@@ -46,7 +46,7 @@ pub async fn open_serial_port_intern(
         }
     });
 
-    let managed_serial_ports = state.serial_state().managed_serial_ports()?;
+    let managed_serial_ports = state.serial_state().managed_serial_ports().await?;
     let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)

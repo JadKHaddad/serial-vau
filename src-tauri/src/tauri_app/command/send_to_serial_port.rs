@@ -5,7 +5,7 @@ use crate::core::state::{
     State,
 };
 
-pub fn send_to_serial_port_intern(
+pub async fn send_to_serial_port_intern(
     name: String,
     bytes: Bytes,
     state: &State,
@@ -19,6 +19,7 @@ pub fn send_to_serial_port_intern(
 
     Ok(state
         .send_to_open_serial_port(&name, packet)
+        .await
         .ok_or(SendToSerialPortError::NotOpen)??)
 }
 

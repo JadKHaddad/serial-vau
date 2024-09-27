@@ -11,9 +11,10 @@ pub async fn close_serial_port_intern(
 
     let _ = state
         .remove_and_cancel_open_serial_port(&name)
+        .await
         .ok_or(CloseSerialPortError::NotOpen)?;
 
-    let managed_serial_ports = state.managed_serial_ports()?;
+    let managed_serial_ports = state.managed_serial_ports().await?;
     let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)

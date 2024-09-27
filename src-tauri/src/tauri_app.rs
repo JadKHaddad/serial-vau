@@ -26,8 +26,12 @@ mod state;
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn get_serial_ports(state: State<TauriAppState>) -> Result<Vec<ManagedSerialPort>, AppError> {
-    get_serial_ports_intern(state.serial_state()).map_err(Into::into)
+pub async fn get_serial_ports(
+    state: State<'_, TauriAppState>,
+) -> Result<Vec<ManagedSerialPort>, AppError> {
+    get_serial_ports_intern(state.serial_state())
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
@@ -55,47 +59,59 @@ pub async fn close_serial_port(
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn send_to_serial_port(
+pub async fn send_to_serial_port(
     name: String,
     value: String,
     state: State<'_, TauriAppState>,
 ) -> Result<(), AppError> {
-    send_to_serial_port_intern(name, value.into(), state.serial_state()).map_err(Into::into)
+    send_to_serial_port_intern(name, value.into(), state.serial_state())
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn send_to_all_serial_ports(value: String, state: State<'_, TauriAppState>) {
-    send_to_all_serial_ports_intern(value.into(), state.serial_state());
+pub async fn send_to_all_serial_ports(
+    value: String,
+    state: State<'_, TauriAppState>,
+) -> Result<(), AppError> {
+    send_to_all_serial_ports_intern(value.into(), state.serial_state()).await;
+    Ok(())
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn subscribe(
+pub async fn subscribe(
     from: &str,
     to: &str,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    subscribe_intern(from, to, state.serial_state()).map_err(Into::into)
+    subscribe_intern(from, to, state.serial_state())
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn unsubscribe(
+pub async fn unsubscribe(
     from: &str,
     to: &str,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    unsubscribe_intern(from, to, state.serial_state()).map_err(Into::into)
+    unsubscribe_intern(from, to, state.serial_state())
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
 #[tracing::instrument(skip_all)]
-pub fn toggle_read_state(
+pub async fn toggle_read_state(
     name: &str,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    toggle_read_state_intern(name, state.serial_state()).map_err(Into::into)
+    toggle_read_state_intern(name, state.serial_state())
+        .await
+        .map_err(Into::into)
 }
 
 #[tauri::command]
@@ -143,7 +159,7 @@ pub fn run() -> anyhow::Result<()> {
                                 },
                             }
 
-                            let _ = emit_managed_serial_ports(&app_handle, &serial_state_watcher);
+                            let _ = emit_managed_serial_ports(&app_handle, &serial_state_watcher).await;
                         }
 
                         tracing::debug!("Serial events watcher terminated");

@@ -8,8 +8,7 @@ use open_serial_port::{
 };
 #[cfg(feature = "subscriptions")]
 use open_serial_port::{PacketOrigin, SubscriptionPacketOrigin, TxHandle};
-use parking_lot::RwLock;
-use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
+use tokio::sync::{mpsc::UnboundedReceiver as MPSCUnboundedReceiver, RwLock};
 use tokio_serial::SerialPortBuilderExt;
 use tokio_util::{
     bytes::BytesMut,
@@ -19,9 +18,10 @@ use tokio_util::{
 
 use super::codec::lines_codec::LinesCodec;
 
-use super::serial::{managed_serial_port::OpenStatus, SerialPort};
-
-use super::serial::managed_serial_port::{ManagedSerialPort, Status};
+use super::serial::{
+    managed_serial_port::{ManagedSerialPort, OpenStatus, Status},
+    SerialPort,
+};
 
 pub mod error;
 pub mod open_serial_port;
@@ -56,10 +56,6 @@ type Subscriptions = HashMap<String, HashMap<String, Option<TxHandle>>>;
 /// Locks are not optimized. See branch [`feat/optimize-locks`](https://github.com/JadKHaddad/serial-vau/tree/feat/optimize-locks) for optimized locks sacrificing readability.
 #[derive(Debug, Default)]
 pub struct StateInner {
-    // TODO: now check tokio async RwLock
-    /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
-    /// which is used in [`Watcher`](super::serial::watcher::Watcher),
-    /// which is used in [`run`](crate::app::run).
     open_serial_ports: RwLock<OpenSerialPorts>,
     /// Closing the Subscriber serial port will set its value to `None`. The subscription will not be removed.
     ///
@@ -84,11 +80,13 @@ impl StateInner {
 - Read: [`Self::subscriptions`].
     "
     )]
-    pub fn managed_serial_ports(&self) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
+    pub async fn managed_serial_ports(
+        &self,
+    ) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
         let available_serial_ports = super::serial::available_ports()?;
-        let open_serial_ports = self.open_serial_ports.read();
+        let open_serial_ports = self.open_serial_ports.read().await;
         #[cfg(feature = "subscriptions")]
-        let subscriptions = self.subscriptions.read();
+        let subscriptions = self.subscriptions.read().await;
 
         let managed_serial_ports = available_serial_ports
             .into_iter()
@@ -141,14 +139,19 @@ impl StateInner {
 - Write: [`Self::subscriptions`]. Inherited from [`Self::add_open_serial_port_to_pending_subscriptions`].
     "
     )]
-    fn add_open_serial_port(&self, open_serial_port: OpenSerialPort) -> Option<OpenSerialPort> {
+    async fn add_open_serial_port(
+        &self,
+        open_serial_port: OpenSerialPort,
+    ) -> Option<OpenSerialPort> {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
 
         #[cfg(feature = "subscriptions")]
-        self.add_open_serial_port_to_pending_subscriptions(&open_serial_port);
+        self.add_open_serial_port_to_pending_subscriptions(&open_serial_port)
+            .await;
 
         self.open_serial_ports
             .write()
+            .await
             .insert(open_serial_port.name().to_string(), open_serial_port)
     }
 
@@ -160,10 +163,13 @@ impl StateInner {
     ///
     /// - Write: [`Self::subscriptions`].
     #[cfg(feature = "subscriptions")]
-    fn add_open_serial_port_to_pending_subscriptions(&self, open_serial_port: &OpenSerialPort) {
+    async fn add_open_serial_port_to_pending_subscriptions(
+        &self,
+        open_serial_port: &OpenSerialPort,
+    ) {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port to pending subscriptions");
 
-        let mut subscriptions = self.subscriptions.write();
+        let mut subscriptions = self.subscriptions.write().await;
 
         for (_, tx_handles) in subscriptions.iter_mut() {
             tx_handles
@@ -182,10 +188,10 @@ impl StateInner {
     ///
     /// - Write: [`Self::subscriptions`].
     #[cfg(feature = "subscriptions")]
-    fn remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
+    async fn remove_open_serial_port_from_all_subscriptions(&self, name: &str) {
         tracing::debug!(name=%name, "Removing serial port as subscriber from all subscriptions");
 
-        let mut subscriptions = self.subscriptions.write();
+        let mut subscriptions = self.subscriptions.write().await;
 
         for (_, tx_handles) in subscriptions.iter_mut() {
             tx_handles.get_mut(name).map(|tx_handle| tx_handle.take());
@@ -203,12 +209,13 @@ impl StateInner {
     "
     )]
     /// - Write: [`Self::open_serial_ports`].
-    fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+    async fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
         tracing::debug!(name=%name, "Removing serial port");
 
         #[cfg(feature = "subscriptions")]
-        self.remove_open_serial_port_from_all_subscriptions(name);
-        self.open_serial_ports.write().remove(name)
+        self.remove_open_serial_port_from_all_subscriptions(name)
+            .await;
+        self.open_serial_ports.write().await.remove(name)
     }
 
     /// Removes and cancels the serial port from [`Self::open_serial_ports`] and cancels its subscription.
@@ -222,8 +229,9 @@ impl StateInner {
     "
     )]
     /// - Write: [`Self::open_serial_ports`]. Inherited from [`Self::remove_open_serial_port`].
-    pub fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+    pub async fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
         self.remove_open_serial_port(name)
+            .await
             .map(OpenSerialPort::cancelled)
     }
 
@@ -239,8 +247,8 @@ impl StateInner {
 - Read: [`Self::subscriptions`].
     "
     )]
-    fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
-        let managed_serial_ports = self.managed_serial_ports()?;
+    async fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
+        let managed_serial_ports = self.managed_serial_ports().await?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
         Ok(managed_serial_port.map(|port| port.is_closed()))
@@ -253,22 +261,26 @@ impl StateInner {
     /// ## Locks
     ///
     /// - Read: [`Self::open_serial_ports`].
-    pub fn send_to_open_serial_port(
+    pub async fn send_to_open_serial_port(
         &self,
         name: &str,
         packet: OutgoingPacket,
     ) -> Option<Result<(), SendError>> {
-        Some(self.open_serial_ports.read().get(name)?.send(packet))
+        Some(self.open_serial_ports.read().await.get(name)?.send(packet))
     }
 
     /// ## Locks
     ///
     /// - Read: [`Self::open_serial_ports`].
-    pub fn send_to_all_open_serial_ports(&self, packet: OutgoingPacket) {
-        self.open_serial_ports.read().values().for_each(|port| {
-            // Cheap clone
-            let _ = port.send(packet.clone());
-        })
+    pub async fn send_to_all_open_serial_ports(&self, packet: OutgoingPacket) {
+        self.open_serial_ports
+            .read()
+            .await
+            .values()
+            .for_each(|port| {
+                // Cheap clone
+                let _ = port.send(packet.clone());
+            })
     }
 
     #[cfg(feature = "subscriptions")]
@@ -286,14 +298,15 @@ impl StateInner {
     /// - Write: [`Self::subscriptions`].
     /// - Read: [`Self::open_serial_ports`].
     #[cfg(feature = "subscriptions")]
-    pub fn subscribe(&self, from: &str, to: &str) {
+    pub async fn subscribe(&self, from: &str, to: &str) {
         tracing::debug!(%from, %to, "Subscribing");
 
-        let mut subscriptions = self.subscriptions.write();
+        let mut subscriptions = self.subscriptions.write().await;
 
         let tx_handle = self
             .open_serial_ports
             .read()
+            .await
             .get(to)
             .map(|port| port.tx_handle());
 
@@ -312,10 +325,10 @@ impl StateInner {
     ///
     /// - Write: [`Self::subscriptions`].
     #[cfg(feature = "subscriptions")]
-    pub fn unsubscribe(&self, from: &str, to: &str) {
+    pub async fn unsubscribe(&self, from: &str, to: &str) {
         tracing::debug!(%from, %to, "Unsubscribing");
 
-        let mut subscriptions = self.subscriptions.write();
+        let mut subscriptions = self.subscriptions.write().await;
 
         subscriptions
             .get_mut(from)
@@ -328,10 +341,10 @@ impl StateInner {
     /// ## Locks
     ///
     /// - Read: [`Self::open_serial_ports`].
-    pub fn toggle_read_state(&self, name: &str) -> Option<()> {
+    pub async fn toggle_read_state(&self, name: &str) -> Option<()> {
         tracing::debug!(name=%name, "Toggling read state");
 
-        return self.open_serial_ports.read().get(name).map(|port| {
+        return self.open_serial_ports.read().await.get(name).map(|port| {
             port.set_read_state(port.read_state().toggle());
         });
     }
@@ -354,7 +367,8 @@ impl State {
         tracing::debug!(?options, "Opening serial port");
 
         let port_to_open_name = self
-            .is_port_closed(&options.name)?
+            .is_port_closed(&options.name)
+            .await?
             .ok_or(OpenSerialPortError::NotFound)?
             .then_some(&options.name)
             .ok_or(OpenSerialPortError::AlreadyOpen)?;
@@ -386,7 +400,8 @@ impl State {
             tx,
             cancellation_token.clone(),
             read_state_tx,
-        ));
+        ))
+        .await;
 
         #[cfg(feature = "subscriptions")]
         let subscriptions = self.subscriptions();
@@ -425,7 +440,7 @@ impl State {
                                                     tracing::trace!(target: "serial_core::serial::read::byte", name=%read_name, ?bytes, "Read");
 
                                                     #[cfg(feature = "subscriptions")]
-                                                    if let Some(subscriptions) = subscriptions.read().get(&read_name){
+                                                    if let Some(subscriptions) = subscriptions.read().await.get(&read_name){
                                                         for (subscriber_name, tx_handle) in subscriptions {
                                                             if let Some(tx_handle) = tx_handle {
                                                                 tracing::trace!(target: "serial_core::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
@@ -488,7 +503,7 @@ impl State {
 
                                                     // Removing the port will drop the sender causing the write loop to break.
                                                     tracing::debug!(target: "serial_core::serial::read", name=%read_name, "Removing serial port due to an error");
-                                                    read_app_state.remove_open_serial_port(&read_name);
+                                                    read_app_state.remove_open_serial_port(&read_name).await;
 
                                                     break;
                                                 }

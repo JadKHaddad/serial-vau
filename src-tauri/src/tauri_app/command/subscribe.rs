@@ -3,7 +3,7 @@ use crate::{
     tauri_app::model::managed_serial_port::ManagedSerialPort,
 };
 
-pub fn subscribe_intern(
+pub async fn subscribe_intern(
     from: &str,
     to: &str,
     _state: &State,
@@ -12,9 +12,9 @@ pub fn subscribe_intern(
 
     #[cfg(feature = "subscriptions")]
     return {
-        _state.subscribe(from, to);
+        _state.subscribe(from, to).await;
 
-        let managed_serial_ports = _state.managed_serial_ports()?;
+        let managed_serial_ports = _state.managed_serial_ports().await?;
         let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
         Ok(managed_serial_ports)
@@ -24,7 +24,7 @@ pub fn subscribe_intern(
     Err(SubscribeError::Disabled)
 }
 
-pub fn unsubscribe_intern(
+pub async fn unsubscribe_intern(
     from: &str,
     to: &str,
     _state: &State,
@@ -33,9 +33,9 @@ pub fn unsubscribe_intern(
 
     #[cfg(feature = "subscriptions")]
     return {
-        _state.unsubscribe(from, to);
+        _state.unsubscribe(from, to).await;
 
-        let managed_serial_ports = _state.managed_serial_ports()?;
+        let managed_serial_ports = _state.managed_serial_ports().await?;
         let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
         Ok(managed_serial_ports)

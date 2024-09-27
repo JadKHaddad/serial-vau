@@ -2437,7 +2437,6 @@ dependencies = [
  "anyhow",
  "chrono",
  "futures",
- "parking_lot",
  "serde",
  "serde_json",
  "tauri",
