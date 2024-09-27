@@ -10,12 +10,13 @@ use command::{
 };
 use error::AppError;
 use event::emit_managed_serial_ports::emit_managed_serial_ports;
+use futures::StreamExt;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use state::State as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::app::state::State as AppState;
 use crate::core::{serial::watcher::Watcher as SerialWatcher, state::State as SerialState};
+use crate::{app::state::State as AppState, core::serial::watcher::SerialEventType};
 
 mod command;
 mod error;
@@ -103,13 +104,9 @@ fn do_error() -> Result<(), AppError> {
     return Err(anyhow::anyhow!("Oops!").into());
 }
 
-/// Using [`thread`](std::thread) instead of `async tasks` to watch `serial` events,
-/// because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
-/// which is used in [`Watcher`](crate::serial::watcher::Watcher),
 pub fn run() -> anyhow::Result<()> {
     let serial_state = SerialState::default();
-    let serial_state_creation = serial_state.clone();
-    let serial_state_deletion = serial_state.clone();
+    let serial_state_watcher = serial_state.clone();
 
     let app_state = AppState::default();
 
@@ -117,55 +114,43 @@ pub fn run() -> anyhow::Result<()> {
     tauri::Builder::default()
         .manage(tauri_app_state)
         .setup(|app| {
-            let app_handle_creation = app.app_handle().clone();
-            let app_handle_deletion = app.app_handle().clone();
+            let app_handle = app.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let pool = tokio_util::task::LocalPoolHandle::new(1);
 
-            // See function's docs
-            std::thread::spawn(move || {
-                tracing::debug!("Starting serial creation events watcher");
+                let _ = pool
+                    .spawn_pinned(|| async move {
+                        let watcher = SerialWatcher::new()?;
+                        let mut stream = std::pin::pin!(watcher.serial_port_events_stream()?);
 
-                let watcher = SerialWatcher::new()?;
-                let creation_iter = watcher.creation_iter()?;
+                        tracing::debug!("Starting serial events watcher");
 
-                for serial_port in creation_iter {
-                    match serial_port  {
-                        Ok(serial_port) => {
-                            tracing::trace!(name=%serial_port.name(), "Serial creation event detected");
-                        },
-                        Err(err) => {tracing::warn!(%err, "Serial creation event error");}
-                    }
+                        while let Some(event) = stream.next().await {
+                            match event {
+                                Err(err) => {
+                                    tracing::warn!(%err, "Serial event error");
+                                    // TODO: Emit error and break
 
-                    let _ = emit_managed_serial_ports(&app_handle_creation, &serial_state_creation);
-                }
+                                    break;
+                                }
+                                Ok(event) => match event.event_type {
+                                    SerialEventType::Creation => {
+                                        tracing::trace!(name=%event.serial_port.name(), "Serial creation event detected");
+                                    }
+                                    SerialEventType::Deletion => {
+                                        tracing::trace!(name=%event.serial_port.name(), "Serial deletion event detected");
+                                    }
+                                },
+                            }
 
-                tracing::debug!("Serial creation events watcher terminated");
-
-                anyhow::Result::<()>::Ok(())
-            });
-
-            // See function's docs
-            std::thread::spawn(move || {
-                tracing::debug!("Starting serial deletion events watcher");
-
-                let watcher = SerialWatcher::new()?;
-                let deletion_iter = watcher.deletion_iter()?;
-
-                for serial_port in deletion_iter {
-                    match serial_port  {
-                        Ok(serial_port) => {
-                            tracing::trace!(name=%serial_port.name(), "Serial deletion event detected");
-                        },
-                        Err(err) =>{
-                            tracing::warn!(%err, "Serial deletion event error");
+                            let _ = emit_managed_serial_ports(&app_handle, &serial_state_watcher);
                         }
-                    }
 
-                    let _ = emit_managed_serial_ports(&app_handle_deletion, &serial_state_deletion);
-                }
+                        tracing::debug!("Serial events watcher terminated");
 
-                tracing::debug!("Serial deletion events watcher terminated");
-
-                anyhow::Result::<()>::Ok(())
+                        anyhow::Result::<()>::Ok(())
+                    })
+                    .await;
             });
 
             Ok(())

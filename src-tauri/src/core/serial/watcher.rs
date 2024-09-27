@@ -1,20 +1,33 @@
 // TODO: the small esp32-c3 with micro usb is not detected by this watcher (using: https://github.com/esp-rs/esp-hal/blob/v0.20.0/examples/src/bin/embassy_serial.rs)
 use std::{collections::HashMap, time::Duration};
 
+use futures::{stream::select, Stream, StreamExt};
 use serde::Deserialize;
 use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
 
 use super::SerialPort;
 
+#[derive(Debug)]
+pub struct SerialPortEvent {
+    pub event_type: SerialEventType,
+    pub serial_port: SerialPort,
+}
+
+#[derive(Debug)]
+pub enum SerialEventType {
+    Creation,
+    Deletion,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename = "Win32_SerialPort")]
 #[serde(rename_all = "PascalCase")]
-pub struct SerialPortEvent {
+pub struct Win32SerialPortEvent {
     name: String,
 }
 
-impl From<SerialPortEvent> for SerialPort {
-    fn from(value: SerialPortEvent) -> Self {
+impl From<Win32SerialPortEvent> for SerialPort {
+    fn from(value: Win32SerialPortEvent) -> Self {
         Self::new(value.name)
     }
 }
@@ -23,7 +36,7 @@ impl From<SerialPortEvent> for SerialPort {
 #[serde(rename = "__InstanceDeletionEvent")]
 #[serde(rename_all = "PascalCase")]
 struct SerialDeletion {
-    target_instance: SerialPortEvent,
+    target_instance: Win32SerialPortEvent,
 }
 
 impl From<SerialDeletion> for SerialPort {
@@ -36,7 +49,7 @@ impl From<SerialDeletion> for SerialPort {
 #[serde(rename = "__InstanceCreationEvent")]
 #[serde(rename_all = "PascalCase")]
 struct SerialCreation {
-    target_instance: SerialPortEvent,
+    target_instance: Win32SerialPortEvent,
 }
 
 impl From<SerialCreation> for SerialPort {
@@ -64,7 +77,7 @@ pub enum CreateFilterError {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum CreateIterError {
+pub enum CreateStreamError {
     #[error("Failed to create filter: {0}")]
     Filter(
         #[source]
@@ -94,36 +107,58 @@ impl Watcher {
         let mut filters = HashMap::<String, FilterValue>::new();
         filters.insert(
             "TargetInstance".to_owned(),
-            FilterValue::is_a::<SerialPortEvent>()?,
+            FilterValue::is_a::<Win32SerialPortEvent>()?,
         );
 
         Ok(filters)
     }
 
-    pub fn creation_iter(
+    fn creation_stream(
         &self,
-    ) -> Result<impl Iterator<Item = Result<SerialPort, WMIError>> + '_, CreateIterError> {
+    ) -> Result<impl Stream<Item = Result<SerialPortEvent, WMIError>> + '_, CreateStreamError> {
         let filters = Watcher::filters()?;
 
-        let creation_iter = self
+        let creation_stream = self
             .wmi_con
-            .filtered_notification::<SerialCreation>(&filters, Some(Duration::from_millis(300)))?
-            .map(|item| item.map(Into::into));
+            .async_filtered_notification::<SerialCreation>(
+                &filters,
+                Some(Duration::from_millis(300)),
+            )?
+            .map(|event| {
+                event.map(|event| SerialPortEvent {
+                    event_type: SerialEventType::Creation,
+                    serial_port: event.into(),
+                })
+            });
 
-        Ok(creation_iter)
+        Ok(creation_stream)
     }
 
-    pub fn deletion_iter(
+    fn deletion_stream(
         &self,
-    ) -> Result<impl Iterator<Item = Result<SerialPort, WMIError>> + '_, CreateIterError> {
+    ) -> Result<impl Stream<Item = Result<SerialPortEvent, WMIError>> + '_, CreateStreamError> {
         let filters = Watcher::filters()?;
 
-        let deletion_iter = self
+        let deletion_stream = self
             .wmi_con
-            .filtered_notification::<SerialDeletion>(&filters, Some(Duration::from_millis(300)))?
-            .map(|item| item.map(Into::into));
+            .async_filtered_notification::<SerialDeletion>(
+                &filters,
+                Some(Duration::from_millis(300)),
+            )?
+            .map(|event| {
+                event.map(|event| SerialPortEvent {
+                    event_type: SerialEventType::Deletion,
+                    serial_port: event.into(),
+                })
+            });
 
-        Ok(deletion_iter)
+        Ok(deletion_stream)
+    }
+
+    pub fn serial_port_events_stream(
+        &self,
+    ) -> Result<impl Stream<Item = Result<SerialPortEvent, WMIError>> + '_, CreateStreamError> {
+        Ok(select(self.creation_stream()?, self.deletion_stream()?))
     }
 }
 
@@ -134,18 +169,6 @@ mod test {
     use futures::{stream::select, StreamExt};
 
     use super::*;
-
-    #[derive(Debug)]
-    struct SerialEvent {
-        event_type: SerialEventType,
-        port_name: String,
-    }
-
-    #[derive(Debug)]
-    enum SerialEventType {
-        Creation,
-        Deletion,
-    }
 
     #[tokio::test]
     #[ignore]
@@ -161,7 +184,7 @@ mod test {
 
             filters.insert(
                 "TargetInstance".to_owned(),
-                FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
+                FilterValue::is_a::<Win32SerialPortEvent>().expect("Failed to create filter"),
             );
 
             let deletion_stream = wmi_con
@@ -171,16 +194,16 @@ mod test {
                 )
                 .expect("Failed to create deletion stream")
                 .filter_map(|event| async move { event.ok() })
-                .map(|event| SerialEvent {
+                .map(|event| SerialPortEvent {
                     event_type: SerialEventType::Deletion,
-                    port_name: event.target_instance.name,
+                    serial_port: SerialPort::new(event.target_instance.name),
                 });
 
             let mut filters = HashMap::<String, FilterValue>::new();
 
             filters.insert(
                 "TargetInstance".to_owned(),
-                FilterValue::is_a::<SerialPortEvent>().expect("Failed to create filter"),
+                FilterValue::is_a::<Win32SerialPortEvent>().expect("Failed to create filter"),
             );
 
             let creation_stream = wmi_con
@@ -190,9 +213,9 @@ mod test {
                 )
                 .expect("Failed to create creation stream")
                 .filter_map(|event| async move { event.ok() })
-                .map(|event| SerialEvent {
+                .map(|event| SerialPortEvent {
                     event_type: SerialEventType::Creation,
-                    port_name: event.target_instance.name,
+                    serial_port: SerialPort::new(event.target_instance.name),
                 });
 
             async move {

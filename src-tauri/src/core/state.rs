@@ -56,6 +56,7 @@ type Subscriptions = HashMap<String, HashMap<String, Option<TxHandle>>>;
 /// Locks are not optimized. See branch [`feat/optimize-locks`](https://github.com/JadKHaddad/serial-vau/tree/feat/optimize-locks) for optimized locks sacrificing readability.
 #[derive(Debug, Default)]
 pub struct StateInner {
+    // TODO: now check tokio async RwLock
     /// Not using an async `RwLock` because [`WMIConnection`](wmi::WMIConnection) is not [`Send`],
     /// which is used in [`Watcher`](super::serial::watcher::Watcher),
     /// which is used in [`run`](crate::app::run).
