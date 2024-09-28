@@ -27,9 +27,9 @@ pub async fn open_serial_port_intern(
         .await?;
 
     let app = app.clone();
-    let packets = state.app_state().get_or_create_packets(&name).await;
 
     let serial_state = state.serial_state().clone();
+    let app_state = state.app_state().clone();
     tokio::spawn(async move {
         tracing::debug!(name=%name, "Read events task started");
 
@@ -37,7 +37,11 @@ pub async fn open_serial_port_intern(
             match packet {
                 Ok(packet) => {
                     // Note: May not be needed. see `crate::app::state::State`
-                    packets.push(&packet).await;
+                    if let Err(err) = app_state.add_packet(&packet).await {
+                        tracing::error!(%err, from=%name, "Error adding packet to app state");
+
+                        // TODO: Emit error
+                    }
 
                     let event = PacketEvent {
                         packet: packet.into(),

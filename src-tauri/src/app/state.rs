@@ -1,42 +1,31 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
-use tokio::sync::RwLock;
+use error::AddPacketError;
 
-use super::model::packet::Packet;
 use crate::core::state::open_serial_port::Packet as CorePacket;
 
-/// Intended to save the packets for serial ports and then dump them to a file if needed.
-///
-/// ## Note
-///
-/// - May not be needed for tauri app, since the frontend saves the packets and can send them along a dump command.
-/// - Needed for other types of apps, like ratatui or slint.
-#[derive(Debug, Default)]
+pub mod error;
+
+/// Intended to save the packets and open options for serial ports.
+#[derive(Debug, Default, Clone)]
 pub struct State {
-    packets: RwLock<HashMap<String, Packets>>,
+    inner: Arc<StateInner>,
 }
 
-impl State {
-    /// Get or create a list of packets for a given serial port name.
-    pub async fn get_or_create_packets(&self, name: &str) -> Packets {
-        let mut packets = self.packets.write().await;
+impl Deref for State {
+    type Target = StateInner;
 
-        packets.entry(name.to_string()).or_default().clone()
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Packets {
-    packets: Arc<RwLock<Vec<Packet>>>,
-}
+#[derive(Debug, Default)]
+pub struct StateInner {}
 
-impl Packets {
-    pub async fn push(&self, packet: &CorePacket) {
-        let packet = Packet {
-            packet_direction: packet.packet_direction.clone(),
-            timestamp_millis: packet.timestamp_millis,
-        };
-
-        self.packets.write().await.push(packet);
+impl StateInner {
+    /// Add the `packet` to the internal buffer and flush it to the database eventually.
+    pub async fn add_packet(&self, packet: &CorePacket) -> Result<(), AddPacketError> {
+        Ok(())
     }
 }
