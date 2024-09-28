@@ -10,30 +10,34 @@ use crate::core::serial::managed_serial_port::ReadState;
 
 use super::SerialPort;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum DataBits {
     Five,
     Six,
     Seven,
+    #[default]
     Eight,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum FlowControl {
+    #[default]
     None,
     Software,
     Hardware,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Parity {
+    #[default]
     None,
     Odd,
     Even,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum StopBits {
+    #[default]
     One,
     Two,
 }
@@ -54,7 +58,7 @@ pub struct OpenSerialPortOptions {
 }
 
 /// Represents a packet that is received from a serial port.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct IncomingPacket {
     pub line: Bytes,
 }
@@ -67,9 +71,10 @@ pub struct SubscriptionPacketOrigin {
 }
 
 /// Origin of an [`OutgoingPacket`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum PacketOrigin {
     /// Sent directly to the serial port by he user.
+    #[default]
     Direct,
     /// Sent via a broadcast to all open serial ports.
     Broadcast,
@@ -93,7 +98,7 @@ impl std::fmt::Display for PacketOrigin {
 }
 
 /// Represents a packet that is sent to a serial port.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct OutgoingPacket {
     /// Bytes sent.
     pub bytes: Bytes,
@@ -107,6 +112,12 @@ pub enum PacketDirection {
     Incoming(IncomingPacket),
     /// From the application to the open serial port.
     Outgoing(OutgoingPacket),
+}
+
+impl Default for PacketDirection {
+    fn default() -> Self {
+        Self::Incoming(IncomingPacket::default())
+    }
 }
 
 /// Packet emitted by [`AppState::open_serial_port`](crate::core::state::AppState::open_serial_port) through the channel.
