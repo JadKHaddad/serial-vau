@@ -1,8 +1,8 @@
 #[derive(Debug, thiserror::Error)]
-pub enum AddPacketError {}
+pub enum AppAddPacketError {}
 
 #[derive(Debug, thiserror::Error)]
-pub enum AddOrUpdateOpenSerialPortOptionsError {}
+pub enum AppAddOrUpdateOpenSerialPortOptionsError {}
 
 #[derive(Debug, thiserror::Error)]
-pub enum GetOpenSerialPortOptionsError {}
+pub enum AppGetOpenSerialPortOptionsError {}

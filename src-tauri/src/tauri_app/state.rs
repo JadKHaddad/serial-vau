@@ -1,7 +1,7 @@
 use std::{ops::Deref, sync::Arc};
 
 use crate::{
-    app::state::{error::GetOpenSerialPortOptionsError, State as AppState},
+    app::state::{error::AppGetOpenSerialPortOptionsError, State as AppState},
     core::state::{
         error::CoreManagedSerialPortsError, open_serial_port::CoreOpenSerialPortOptions,
         State as SerialState,
@@ -91,6 +91,6 @@ pub enum TauriAppStateManagedSerialPortsError {
     GetOpenSerialPortOptionsError(
         #[source]
         #[from]
-        GetOpenSerialPortOptionsError,
+        AppGetOpenSerialPortOptionsError,
     ),
 }

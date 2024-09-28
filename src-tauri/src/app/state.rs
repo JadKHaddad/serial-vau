@@ -1,6 +1,8 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use error::{AddOrUpdateOpenSerialPortOptionsError, AddPacketError, GetOpenSerialPortOptionsError};
+use error::{
+    AppAddOrUpdateOpenSerialPortOptionsError, AppAddPacketError, AppGetOpenSerialPortOptionsError,
+};
 
 use crate::core::state::open_serial_port::{CoreOpenSerialPortOptions, CorePacket};
 
@@ -29,14 +31,14 @@ pub struct StateInner {}
 
 impl StateInner {
     /// Add the `packet` to the internal buffer and flush it to the database eventually.
-    pub async fn add_packet(&self, packet: &CorePacket) -> Result<(), AddPacketError> {
+    pub async fn add_packet(&self, packet: &CorePacket) -> Result<(), AppAddPacketError> {
         // TODO: Implement this.
 
         Ok(())
     }
 
     /// Get the packets for the `port_name`.
-    pub async fn get_packets(&self, port_name: &str) -> Result<AppPacket, AddPacketError> {
+    pub async fn get_packets(&self, port_name: &str) -> Result<AppPacket, AppAddPacketError> {
         // TODO: Implement this.
 
         Ok(AppPacket::default())
@@ -48,7 +50,7 @@ impl StateInner {
         &self,
         port_name: &str,
         options: &CoreOpenSerialPortOptions,
-    ) -> Result<(), AddOrUpdateOpenSerialPortOptionsError> {
+    ) -> Result<(), AppAddOrUpdateOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
         Ok(())
@@ -58,7 +60,7 @@ impl StateInner {
     pub async fn get_open_serial_port_options(
         &self,
         port_name: &str,
-    ) -> Result<AppOpenSerialPortOptions, GetOpenSerialPortOptionsError> {
+    ) -> Result<AppOpenSerialPortOptions, AppGetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
         Ok(AppOpenSerialPortOptions::default())
@@ -69,7 +71,7 @@ impl StateInner {
     /// Returns a map of the port name to the open options.
     pub async fn get_all_open_serial_port_options(
         &self,
-    ) -> Result<HashMap<String, AppOpenSerialPortOptions>, GetOpenSerialPortOptionsError> {
+    ) -> Result<HashMap<String, AppOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
         Ok(HashMap::new())
