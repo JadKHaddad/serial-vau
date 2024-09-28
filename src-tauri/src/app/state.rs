@@ -10,6 +10,8 @@ use super::model::{open_serial_port_options::OpenSerialPortOptions, packet::Pack
 
 pub mod error;
 
+// TODO after implementing the database and adding the models make the models From/Into CoreModels like src-tauri/src/tauri_app/model/managed_serial_port.rs
+
 /// Intended to save the packets and open options for serial ports.
 #[derive(Debug, Default, Clone)]
 pub struct State {

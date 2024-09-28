@@ -44,7 +44,7 @@ pub struct Duration {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenSerialPortOptions {
-    pub name: String,
+    pub name: String, // TODO remove and make it a separate function argument
     pub initial_read_state: ReadState,
     pub baud_rate: u32,
     pub data_bits: DataBits,

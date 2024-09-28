@@ -30,6 +30,11 @@ pub struct ManagedSerialPort {
     pub subscriptions: Vec<String>,
     #[cfg(feature = "subscriptions")]
     pub subscribed_to: Vec<String>,
+    // TODO
+    // pub open_options: These are the saved open options for this serial port. if not saved, then default. For creating the default use CoreOpenSerialPortOptions::default() then convert to OpenSerialPortOptions
+    // update the front end type
+    // remove port name from the open options
+    // make the name a separate function argument
 }
 
 mod core_impl {
