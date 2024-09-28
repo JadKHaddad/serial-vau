@@ -6,12 +6,12 @@ use tokio::sync::{
 };
 use tokio_util::{bytes::Bytes, sync::CancellationToken};
 
-use crate::core::serial::managed_serial_port::ReadState;
+use crate::core::serial::managed_serial_port::CoreReadState;
 
-use super::SerialPort;
+use super::CoreSerialPort;
 
 #[derive(Debug, Default)]
-pub enum DataBits {
+pub enum CoreDataBits {
     Five,
     Six,
     Seven,
@@ -20,7 +20,7 @@ pub enum DataBits {
 }
 
 #[derive(Debug, Default)]
-pub enum FlowControl {
+pub enum CoreFlowControl {
     #[default]
     None,
     Software,
@@ -28,7 +28,7 @@ pub enum FlowControl {
 }
 
 #[derive(Debug, Default)]
-pub enum Parity {
+pub enum CoreParity {
     #[default]
     None,
     Odd,
@@ -36,7 +36,7 @@ pub enum Parity {
 }
 
 #[derive(Debug, Default)]
-pub enum StopBits {
+pub enum CoreStopBits {
     #[default]
     One,
     Two,
@@ -44,33 +44,33 @@ pub enum StopBits {
 
 /// Describes how a given serial port should be open.
 #[derive(Debug, Default)]
-pub struct OpenSerialPortOptions {
+pub struct CoreOpenSerialPortOptions {
     /// Defines the [`ReadState`] of a serial port before it is even open.
-    pub initial_read_state: ReadState,
+    pub initial_read_state: CoreReadState,
     pub baud_rate: u32,
-    pub data_bits: DataBits,
-    pub flow_control: FlowControl,
-    pub parity: Parity,
-    pub stop_bits: StopBits,
+    pub data_bits: CoreDataBits,
+    pub flow_control: CoreFlowControl,
+    pub parity: CoreParity,
+    pub stop_bits: CoreStopBits,
     pub timeout: Duration,
 }
 
 /// Represents a packet that is received from a serial port.
 #[derive(Debug, Clone, Default)]
-pub struct IncomingPacket {
+pub struct CoreIncomingPacket {
     pub line: Bytes,
 }
 
 #[cfg(feature = "subscriptions")]
 #[derive(Debug, Clone)]
-pub struct SubscriptionPacketOrigin {
+pub struct CoreSubscriptionPacketOrigin {
     /// The name of the serial port that sent the packet.
     pub name: String,
 }
 
 /// Origin of an [`OutgoingPacket`].
 #[derive(Debug, Clone, Default)]
-pub enum PacketOrigin {
+pub enum CorePacketOrigin {
     /// Sent directly to the serial port by he user.
     #[default]
     Direct,
@@ -78,11 +78,11 @@ pub enum PacketOrigin {
     Broadcast,
     /// Sent via a subscription from another serial port.
     #[cfg(feature = "subscriptions")]
-    Subscription(SubscriptionPacketOrigin),
+    Subscription(CoreSubscriptionPacketOrigin),
 }
 
 /// Usefull for tracing.
-impl std::fmt::Display for PacketOrigin {
+impl std::fmt::Display for CorePacketOrigin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Direct => write!(f, "Direct"),
@@ -97,39 +97,39 @@ impl std::fmt::Display for PacketOrigin {
 
 /// Represents a packet that is sent to a serial port.
 #[derive(Debug, Clone, Default)]
-pub struct OutgoingPacket {
+pub struct CoreOutgoingPacket {
     /// Bytes sent.
     pub bytes: Bytes,
     /// Origin of an [`OutgoingPacket`].
-    pub packet_origin: PacketOrigin,
+    pub packet_origin: CorePacketOrigin,
 }
 
 #[derive(Debug, Clone)]
-pub enum PacketDirection {
+pub enum CorePacketDirection {
     /// From the open serial port to the application.
-    Incoming(IncomingPacket),
+    Incoming(CoreIncomingPacket),
     /// From the application to the open serial port.
-    Outgoing(OutgoingPacket),
+    Outgoing(CoreOutgoingPacket),
 }
 
-impl Default for PacketDirection {
+impl Default for CorePacketDirection {
     fn default() -> Self {
-        Self::Incoming(IncomingPacket::default())
+        Self::Incoming(CoreIncomingPacket::default())
     }
 }
 
 /// Packet emitted by [`AppState::open_serial_port`](crate::core::state::AppState::open_serial_port) through the channel.
 #[derive(Debug, Clone)]
-pub struct Packet {
-    pub packet_direction: PacketDirection,
+pub struct CorePacket {
+    pub packet_direction: CorePacketDirection,
     /// The name of the corresponding serial port.
     pub port_name: String,
     pub timestamp_millis: u64,
 }
 
-impl Packet {
+impl CorePacket {
     pub fn new_with_current_timestamp(
-        packet_direction: PacketDirection,
+        packet_direction: CorePacketDirection,
         port_name: String,
     ) -> Self {
         Self {
@@ -145,13 +145,13 @@ impl Packet {
 #[derive(Debug)]
 #[cfg(feature = "subscriptions")]
 pub struct TxHandle {
-    serial_port: SerialPort,
-    tx: MPSCUnboundedSender<OutgoingPacket>,
+    serial_port: CoreSerialPort,
+    tx: MPSCUnboundedSender<CoreOutgoingPacket>,
 }
 
 #[cfg(feature = "subscriptions")]
 impl TxHandle {
-    pub fn send(&self, value: OutgoingPacket) -> Result<(), SendError> {
+    pub fn send(&self, value: CoreOutgoingPacket) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
     }
 
@@ -161,25 +161,25 @@ impl TxHandle {
 }
 
 #[derive(Debug)]
-pub struct OpenSerialPort {
-    serial_port: SerialPort,
+pub struct CoreOpenSerialPort {
+    serial_port: CoreSerialPort,
     /// Main channel to send data to the serial port.
     ///
     /// The write task is waiting for data to be sent to the serial port.
-    tx: MPSCUnboundedSender<OutgoingPacket>,
+    tx: MPSCUnboundedSender<CoreOutgoingPacket>,
     cancellation_token: CancellationToken,
     /// Defines if the read task is currently reading or stopped.
     ///
     /// The read task is always watching for changes to the read state.
-    read_state_tx: WatchSender<ReadState>,
+    read_state_tx: WatchSender<CoreReadState>,
 }
 
-impl OpenSerialPort {
+impl CoreOpenSerialPort {
     pub fn new(
-        serial_port: SerialPort,
-        tx: MPSCUnboundedSender<OutgoingPacket>,
+        serial_port: CoreSerialPort,
+        tx: MPSCUnboundedSender<CoreOutgoingPacket>,
         cancellation_token: CancellationToken,
-        read_state_tx: WatchSender<ReadState>,
+        read_state_tx: WatchSender<CoreReadState>,
     ) -> Self {
         Self {
             serial_port,
@@ -204,7 +204,7 @@ impl OpenSerialPort {
         self
     }
 
-    pub(super) fn send(&self, value: OutgoingPacket) -> Result<(), SendError> {
+    pub(super) fn send(&self, value: CoreOutgoingPacket) -> Result<(), SendError> {
         Ok(self.tx.send(value)?)
     }
 
@@ -217,11 +217,11 @@ impl OpenSerialPort {
     }
 
     /// Fails silently if the send fails. Open serial port is probably closed.
-    pub(super) fn set_read_state(&self, read_state: ReadState) {
+    pub(super) fn set_read_state(&self, read_state: CoreReadState) {
         let _ = self.read_state_tx.send(read_state);
     }
 
-    pub(super) fn read_state(&self) -> ReadState {
+    pub(super) fn read_state(&self) -> CoreReadState {
         *self.read_state_tx.borrow()
     }
 }
@@ -233,7 +233,7 @@ pub enum SendError {
     Send(
         #[source]
         #[from]
-        TokioSendError<OutgoingPacket>,
+        TokioSendError<CoreOutgoingPacket>,
     ),
 }
 
@@ -245,42 +245,42 @@ mod impl_tokio_serial {
         StopBits as TokioStopBits,
     };
 
-    impl From<DataBits> for TokioDataBits {
-        fn from(data_bits: DataBits) -> Self {
+    impl From<CoreDataBits> for TokioDataBits {
+        fn from(data_bits: CoreDataBits) -> Self {
             match data_bits {
-                DataBits::Five => TokioDataBits::Five,
-                DataBits::Six => TokioDataBits::Six,
-                DataBits::Seven => TokioDataBits::Seven,
-                DataBits::Eight => TokioDataBits::Eight,
+                CoreDataBits::Five => TokioDataBits::Five,
+                CoreDataBits::Six => TokioDataBits::Six,
+                CoreDataBits::Seven => TokioDataBits::Seven,
+                CoreDataBits::Eight => TokioDataBits::Eight,
             }
         }
     }
 
-    impl From<FlowControl> for TokioFlowControl {
-        fn from(flow_control: FlowControl) -> Self {
+    impl From<CoreFlowControl> for TokioFlowControl {
+        fn from(flow_control: CoreFlowControl) -> Self {
             match flow_control {
-                FlowControl::None => TokioFlowControl::None,
-                FlowControl::Software => TokioFlowControl::Software,
-                FlowControl::Hardware => TokioFlowControl::Hardware,
+                CoreFlowControl::None => TokioFlowControl::None,
+                CoreFlowControl::Software => TokioFlowControl::Software,
+                CoreFlowControl::Hardware => TokioFlowControl::Hardware,
             }
         }
     }
 
-    impl From<Parity> for TokioParity {
-        fn from(parity: Parity) -> Self {
+    impl From<CoreParity> for TokioParity {
+        fn from(parity: CoreParity) -> Self {
             match parity {
-                Parity::None => TokioParity::None,
-                Parity::Odd => TokioParity::Odd,
-                Parity::Even => TokioParity::Even,
+                CoreParity::None => TokioParity::None,
+                CoreParity::Odd => TokioParity::Odd,
+                CoreParity::Even => TokioParity::Even,
             }
         }
     }
 
-    impl From<StopBits> for TokioStopBits {
-        fn from(stop_bits: StopBits) -> Self {
+    impl From<CoreStopBits> for TokioStopBits {
+        fn from(stop_bits: CoreStopBits) -> Self {
             match stop_bits {
-                StopBits::One => TokioStopBits::One,
-                StopBits::Two => TokioStopBits::Two,
+                CoreStopBits::One => TokioStopBits::One,
+                CoreStopBits::Two => TokioStopBits::Two,
             }
         }
     }

@@ -12,7 +12,7 @@ pub struct OpenSerialPortOptions {
 
 mod core_impl {
     use super::*;
-    use crate::core::state::open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions;
+    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions as CoreOpenSerialPortOptions;
 
     impl From<OpenSerialPortOptions> for CoreOpenSerialPortOptions {
         fn from(value: OpenSerialPortOptions) -> Self {

@@ -41,10 +41,9 @@ pub struct ManagedSerialPort {
 mod core_impl {
     use super::*;
     use crate::core::serial::managed_serial_port::{
-        ManagedSerialPort as CoreManagedSerialPort, OpenStatus as CoreOpenStatus,
-        ReadState as CoreReadState, Status as CoreStatus,
+        CoreManagedSerialPort, CoreOpenStatus, CoreReadState, Status as CoreStatus,
     };
-    use crate::core::state::open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions;
+    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions;
 
     impl From<CoreOpenStatus> for OpenStatus {
         fn from(value: CoreOpenStatus) -> Self {
@@ -123,7 +122,7 @@ mod core_impl {
 mod tests {
     use super::*;
 
-    use crate::core::state::open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions;
+    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions;
 
     #[test]
     #[ignore = "Only used for manual verification"]

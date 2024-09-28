@@ -2,9 +2,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use error::{AddOrUpdateOpenSerialPortOptionsError, AddPacketError, GetOpenSerialPortOptionsError};
 
-use crate::core::state::open_serial_port::{
-    OpenSerialPortOptions as CoreOpenSerialPortOptions, Packet as CorePacket,
-};
+use crate::core::state::open_serial_port::{CoreOpenSerialPortOptions, CorePacket};
 
 use super::model::{open_serial_port_options::OpenSerialPortOptions, packet::Packet};
 

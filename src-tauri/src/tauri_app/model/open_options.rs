@@ -57,9 +57,8 @@ mod core_impl {
     use super::*;
 
     use crate::core::state::open_serial_port::{
-        DataBits as CoreDataBits, FlowControl as CoreFlowControl,
-        OpenSerialPortOptions as CoreOpenSerialPortOptions, Parity as CoreParity,
-        StopBits as CoreStopBits,
+        CoreDataBits, CoreFlowControl, CoreParity, CoreStopBits,
+        CoreOpenSerialPortOptions as CoreOpenSerialPortOptions,
     };
     use core::time::Duration as CoreDuration;
 

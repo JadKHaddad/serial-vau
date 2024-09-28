@@ -1,6 +1,6 @@
 /// Defines if an open serial port is currently reading or stopped.
 #[derive(Debug, Clone, Copy, Default)]
-pub enum ReadState {
+pub enum CoreReadState {
     #[default]
     Read,
     Stop,
@@ -8,18 +8,18 @@ pub enum ReadState {
 
 /// Defines additional information if the port is in [`Status::Open`] state.
 #[derive(Debug)]
-pub struct OpenStatus {
-    pub read_state: ReadState,
+pub struct CoreOpenStatus {
+    pub read_state: CoreReadState,
 }
 
 /// Status of a serial port.
 #[derive(Debug)]
 pub enum Status {
     Closed,
-    Open(OpenStatus),
+    Open(CoreOpenStatus),
 }
 
-impl ReadState {
+impl CoreReadState {
     pub fn is_stop(&self) -> bool {
         matches!(self, Self::Stop)
     }
@@ -33,7 +33,7 @@ impl ReadState {
 }
 
 #[derive(Debug)]
-pub struct ManagedSerialPort {
+pub struct CoreManagedSerialPort {
     pub name: String,
     pub status: Status,
     #[cfg(feature = "subscriptions")]
@@ -42,7 +42,7 @@ pub struct ManagedSerialPort {
     pub subscribed_to: Vec<String>,
 }
 
-impl ManagedSerialPort {
+impl CoreManagedSerialPort {
     pub fn is_open(&self) -> bool {
         matches!(self.status, Status::Open(_))
     }

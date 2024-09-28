@@ -4,7 +4,7 @@ use crate::{
     app::state::{error::GetOpenSerialPortOptionsError, State as AppState},
     core::state::{
         error::ManagedSerialPortsError,
-        open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions, State as SerialState,
+        open_serial_port::CoreOpenSerialPortOptions as CoreOpenSerialPortOptions, State as SerialState,
     },
 };
 
