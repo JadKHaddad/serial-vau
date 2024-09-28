@@ -1,7 +1,7 @@
 /// Contains the options that can are database models as well.
 /// These fields are not from [OpenSerialPortOptions](crate::core::state::open_serial_port::OpenSerialPortOptions).
 #[derive(Debug, Default, Clone)]
-pub struct OpenSerialPortOptions {
+pub struct AppOpenSerialPortOptions {
     // pub baud_rate: u32,
     // pub data_bits: DataBits,
     // pub flow_control: FlowControl,
@@ -12,10 +12,10 @@ pub struct OpenSerialPortOptions {
 
 mod core_impl {
     use super::*;
-    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions as CoreOpenSerialPortOptions;
+    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions;
 
-    impl From<OpenSerialPortOptions> for CoreOpenSerialPortOptions {
-        fn from(value: OpenSerialPortOptions) -> Self {
+    impl From<AppOpenSerialPortOptions> for CoreOpenSerialPortOptions {
+        fn from(value: AppOpenSerialPortOptions) -> Self {
             CoreOpenSerialPortOptions::default()
         }
     }

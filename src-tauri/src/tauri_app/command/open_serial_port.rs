@@ -2,8 +2,8 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     core::state::{
-        error::{IncomingPacketError, OpenSerialPortError as CoreOpenSerialPortError, PacketError},
-        open_serial_port::CoreOpenSerialPortOptions as CoreOpenSerialPortOptions,
+        error::{CoreIncomingPacketError, CoreOpenSerialPortError, CorePacketError},
+        open_serial_port::CoreOpenSerialPortOptions,
     },
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
@@ -70,7 +70,7 @@ pub async fn open_serial_port_intern(
 
                     match err {
                         // Decoding lines error will not break the read loop in `State.open_serial_port`.
-                        PacketError::Incoming(IncomingPacketError::Codec(..)) => {}
+                        CorePacketError::Incoming(CoreIncomingPacketError::Codec(..)) => {}
                         _ => {
                             let _ = emit_managed_serial_ports(&app, &tauri_app_state).await;
                         }

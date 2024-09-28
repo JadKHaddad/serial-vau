@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use error::{ManagedSerialPortsError, OpenSerialPortError, PacketError};
+use error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError};
 use futures::{SinkExt, StreamExt};
 use open_serial_port::{
     CoreIncomingPacket, CoreOpenSerialPort, CoreOpenSerialPortOptions, CoreOutgoingPacket,
@@ -82,7 +82,7 @@ impl StateInner {
     )]
     pub async fn managed_serial_ports(
         &self,
-    ) -> Result<Vec<CoreManagedSerialPort>, ManagedSerialPortsError> {
+    ) -> Result<Vec<CoreManagedSerialPort>, CoreManagedSerialPortsError> {
         let available_serial_ports = super::serial::available_ports()?;
         let open_serial_ports = self.open_serial_ports.read().await;
         #[cfg(feature = "subscriptions")]
@@ -250,7 +250,10 @@ impl StateInner {
 - Read: [`Self::subscriptions`].
     "
     )]
-    async fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
+    async fn is_port_closed(
+        &self,
+        name: &str,
+    ) -> Result<Option<bool>, CoreManagedSerialPortsError> {
         let managed_serial_ports = self.managed_serial_ports().await?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
@@ -367,15 +370,16 @@ impl State {
         &self,
         name: &str,
         options: CoreOpenSerialPortOptions,
-    ) -> Result<MPSCUnboundedReceiver<Result<CorePacket, PacketError>>, OpenSerialPortError> {
+    ) -> Result<MPSCUnboundedReceiver<Result<CorePacket, CorePacketError>>, CoreOpenSerialPortError>
+    {
         tracing::debug!(?options, "Opening serial port");
 
         let port_to_open_name = self
             .is_port_closed(name)
             .await?
-            .ok_or(OpenSerialPortError::NotFound)?
+            .ok_or(CoreOpenSerialPortError::NotFound)?
             .then_some(name)
-            .ok_or(OpenSerialPortError::AlreadyOpen)?;
+            .ok_or(CoreOpenSerialPortError::AlreadyOpen)?;
 
         let port = tokio_serial::new(port_to_open_name, options.baud_rate)
             .stop_bits(options.stop_bits.into())
@@ -389,7 +393,7 @@ impl State {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<CoreOutgoingPacket>();
 
         let (packet_tx, packet_rx) =
-            tokio::sync::mpsc::unbounded_channel::<Result<CorePacket, PacketError>>();
+            tokio::sync::mpsc::unbounded_channel::<Result<CorePacket, CorePacketError>>();
 
         let cancellation_token = CancellationToken::new();
 
@@ -488,7 +492,7 @@ impl State {
                                                                 tracing::warn!(target: "serial_core::serial::read::line", name=%read_name, %err, "Failed to decode line");
 
                                                                 // Feedback
-                                                                let _ = read_packet_tx.send(Err(PacketError::Incoming(err.into())));
+                                                                let _ = read_packet_tx.send(Err(CorePacketError::Incoming(err.into())));
 
                                                                 // Clear the buffer to prevent further errors.
                                                                 lines_bytes.clear();
@@ -502,7 +506,7 @@ impl State {
                                                     tracing::error!(target: "serial_core::serial::read", name=%read_name, %err);
 
                                                     // Feedback
-                                                    let _ = read_packet_tx.send(Err(PacketError::Incoming(err.into())));
+                                                    let _ = read_packet_tx.send(Err(CorePacketError::Incoming(err.into())));
 
                                                     // Removing the port will drop the sender causing the write loop to break.
                                                     tracing::debug!(target: "serial_core::serial::read", name=%read_name, "Removing serial port due to an error");
@@ -588,7 +592,7 @@ impl State {
                                 tracing::error!(target: "serial_core::serial::write::result", name=%write_name, origin=?packet.packet_origin, %err);
 
                                 // Feedback
-                                let _ = write_packet_tx.send(Err(PacketError::Outgoing(err.into())));
+                                let _ = write_packet_tx.send(Err(CorePacketError::Outgoing(err.into())));
 
                                 break;
                             }

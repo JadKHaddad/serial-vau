@@ -4,7 +4,7 @@ use error::{AddOrUpdateOpenSerialPortOptionsError, AddPacketError, GetOpenSerial
 
 use crate::core::state::open_serial_port::{CoreOpenSerialPortOptions, CorePacket};
 
-use super::model::{open_serial_port_options::OpenSerialPortOptions, packet::Packet};
+use super::model::{open_serial_port_options::AppOpenSerialPortOptions, packet::AppPacket};
 
 pub mod error;
 
@@ -36,10 +36,10 @@ impl StateInner {
     }
 
     /// Get the packets for the `port_name`.
-    pub async fn get_packets(&self, port_name: &str) -> Result<Packet, AddPacketError> {
+    pub async fn get_packets(&self, port_name: &str) -> Result<AppPacket, AddPacketError> {
         // TODO: Implement this.
 
-        Ok(Packet::default())
+        Ok(AppPacket::default())
     }
 
     /// If the `open_options` already exists, update it. and save it to the database.
@@ -58,10 +58,10 @@ impl StateInner {
     pub async fn get_open_serial_port_options(
         &self,
         port_name: &str,
-    ) -> Result<OpenSerialPortOptions, GetOpenSerialPortOptionsError> {
+    ) -> Result<AppOpenSerialPortOptions, GetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
-        Ok(OpenSerialPortOptions::default())
+        Ok(AppOpenSerialPortOptions::default())
     }
 
     /// Get all the open options for all the open serial ports.
@@ -69,7 +69,7 @@ impl StateInner {
     /// Returns a map of the port name to the open options.
     pub async fn get_all_open_serial_port_options(
         &self,
-    ) -> Result<HashMap<String, OpenSerialPortOptions>, GetOpenSerialPortOptionsError> {
+    ) -> Result<HashMap<String, AppOpenSerialPortOptions>, GetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
         Ok(HashMap::new())
