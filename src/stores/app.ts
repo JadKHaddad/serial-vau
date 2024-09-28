@@ -23,8 +23,8 @@ export const useAppStore = defineStore('app', () => {
       });
   }
 
-  function openSerialPort(options: OpenSerialPortOptions) {
-    invoke('open_serial_port', { options })
+  function openSerialPort(name: string, options: OpenSerialPortOptions) {
+    invoke('open_serial_port', { name, options })
       .then((response) => {
         const managedSerialPortsResponse = response as ManagedSerialPort[];
 

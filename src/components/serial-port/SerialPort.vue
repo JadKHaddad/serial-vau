@@ -60,19 +60,20 @@
                 </v-list>
             </v-menu>
 
-            <v-btn @click="openSerialPort({
-                name: port.name,
-                initialReadState: ReadState.Read,
-                baudRate: 115200,
-                dataBits: DataBits.Eight,
-                flowControl: FlowControl.None,
-                parity: Parity.None,
-                stopBits: StopBits.One,
-                timeout: {
-                    secs: 0,
-                    nanos: 0
-                }
-            })" variant="plain">
+            <v-btn @click="openSerialPort(
+                port.name,
+                {
+                    initialReadState: ReadState.Read,
+                    baudRate: 115200,
+                    dataBits: DataBits.Eight,
+                    flowControl: FlowControl.None,
+                    parity: Parity.None,
+                    stopBits: StopBits.One,
+                    timeout: {
+                        secs: 0,
+                        nanos: 0
+                    }
+                })" variant="plain">
                 Open
             </v-btn>
             <v-btn @click="closeSerialPort" variant="plain">
@@ -97,8 +98,8 @@ const props = defineProps<{
 
 const app = useAppStore()
 
-const openSerialPort = (options: OpenSerialPortOptions) => {
-    app.openSerialPort(options);
+const openSerialPort = (name: string, options: OpenSerialPortOptions) => {
+    app.openSerialPort(name, options);
 }
 
 const closeSerialPort = () => {

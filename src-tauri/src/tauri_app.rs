@@ -35,11 +35,12 @@ pub async fn get_serial_ports(
 #[tauri::command]
 #[tracing::instrument(skip_all)]
 pub async fn open_serial_port(
+    name: String,
     options: OpenSerialPortOptions,
     app: AppHandle,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    open_serial_port_intern(options, &app, &state)
+    open_serial_port_intern(name, options, &app, &state)
         .await
         .map_err(Into::into)
 }

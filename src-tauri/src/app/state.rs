@@ -48,6 +48,7 @@ impl StateInner {
     /// If the `open_options` does not exist, add it and save it to the database.
     pub async fn add_or_update_open_serial_port_options(
         &self,
+        port_name: &str,
         options: &CoreOpenSerialPortOptions,
     ) -> Result<(), AddOrUpdateOpenSerialPortOptionsError> {
         // TODO: Implement this.

@@ -16,28 +16,30 @@ use crate::{
 };
 
 pub async fn open_serial_port_intern(
+    name: String,
     options: OpenSerialPortOptions,
     app: &AppHandle,
     state: &TauriAppState,
 ) -> Result<Vec<ManagedSerialPort>, OpenSerialPortError> {
     tracing::info!(?options, "Opening serial port");
 
-    let name = options.name.clone();
-
     let core_options: CoreOpenSerialPortOptions = options.into();
 
     // save the options
     if let Err(err) = state
         .app_state()
-        .add_or_update_open_serial_port_options(&core_options)
+        .add_or_update_open_serial_port_options(&name, &core_options)
         .await
     {
-        tracing::error!(%err, %name, "Error adding or updating open serial port options");
+        tracing::error!(%err, name=%name, "Error adding or updating open serial port options");
 
         // TODO: Emit non-fatal error
     }
 
-    let mut rx = state.serial_state().open_serial_port(core_options).await?;
+    let mut rx = state
+        .serial_state()
+        .open_serial_port(&name, core_options)
+        .await?;
 
     let app = app.clone();
 

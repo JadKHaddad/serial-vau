@@ -44,7 +44,6 @@ pub struct Duration {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenSerialPortOptions {
-    pub name: String, // TODO remove and make it a separate function argument
     pub initial_read_state: ReadState,
     pub baud_rate: u32,
     pub data_bits: DataBits,
@@ -113,7 +112,6 @@ mod core_impl {
     impl From<OpenSerialPortOptions> for CoreOpenSerialPortOptions {
         fn from(value: OpenSerialPortOptions) -> Self {
             Self {
-                name: value.name,
                 initial_read_state: value.initial_read_state.into(),
                 baud_rate: value.baud_rate,
                 data_bits: value.data_bits.into(),

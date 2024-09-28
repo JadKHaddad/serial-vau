@@ -362,15 +362,16 @@ impl State {
     )]
     pub async fn open_serial_port(
         &self,
+        name: &str,
         options: OpenSerialPortOptions,
     ) -> Result<MPSCUnboundedReceiver<Result<Packet, PacketError>>, OpenSerialPortError> {
         tracing::debug!(?options, "Opening serial port");
 
         let port_to_open_name = self
-            .is_port_closed(&options.name)
+            .is_port_closed(name)
             .await?
             .ok_or(OpenSerialPortError::NotFound)?
-            .then_some(&options.name)
+            .then_some(name)
             .ok_or(OpenSerialPortError::AlreadyOpen)?;
 
         let port = tokio_serial::new(port_to_open_name, options.baud_rate)
@@ -396,7 +397,7 @@ impl State {
             tokio::sync::watch::channel(options.initial_read_state);
 
         self.add_open_serial_port(OpenSerialPort::new(
-            SerialPort::new(options.name.clone()),
+            SerialPort::new(name.into()),
             tx,
             cancellation_token.clone(),
             read_state_tx,
@@ -407,7 +408,7 @@ impl State {
         let subscriptions = self.subscriptions();
         let read_app_state = self.clone();
         let read_cancellation_token = cancellation_token.clone();
-        let read_name = options.name.clone();
+        let read_name = name.to_owned();
         let read_packet_tx = packet_tx.clone();
 
         tokio::spawn(async move {
@@ -548,7 +549,7 @@ impl State {
             tracing::debug!(target: "serial_core::serial::read", name=%read_name, "Read task terminated")
         });
 
-        let write_name = options.name.clone();
+        let write_name = name.to_owned();
         let write_cancellation_token = cancellation_token;
         let write_packet_tx = packet_tx.clone();
 

@@ -30,7 +30,6 @@ export type Duration = {
 }
 
 export type OpenSerialPortOptions = {
-    name: string;
     initialReadState: ReadState;
     baudRate: number;
     dataBits: DataBits;
