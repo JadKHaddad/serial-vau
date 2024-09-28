@@ -54,7 +54,7 @@ impl StateInner {
     }
 
     /// Get the open options for the `port_name`.
-    pub async fn get_open_seril_port_options(
+    pub async fn get_open_serial_port_options(
         &self,
         port_name: &str,
     ) -> Result<OpenSerialPortOptions, GetOpenSerialPortOptionsError> {
