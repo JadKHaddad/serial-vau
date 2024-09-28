@@ -1,9 +1,12 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    core::state::error::{
-        IncomingPacketError, ManagedSerialPortsError,
-        OpenSerialPortError as CoreOpenSerialPortError, PacketError,
+    core::state::{
+        error::{
+            IncomingPacketError, ManagedSerialPortsError,
+            OpenSerialPortError as CoreOpenSerialPortError, PacketError,
+        },
+        open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions,
     },
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
@@ -21,10 +24,20 @@ pub async fn open_serial_port_intern(
 
     let name = options.name.clone();
 
-    let mut rx = state
-        .serial_state()
-        .open_serial_port(options.into())
-        .await?;
+    let core_options: CoreOpenSerialPortOptions = options.into();
+
+    // save the options
+    if let Err(err) = state
+        .app_state()
+        .add_or_update_open_serial_port_options(&core_options)
+        .await
+    {
+        tracing::error!(%err, %name, "Error adding or updating open serial port options");
+
+        // TODO: Emit non-fatal error
+    }
+
+    let mut rx = state.serial_state().open_serial_port(core_options).await?;
 
     let app = app.clone();
 
@@ -40,7 +53,7 @@ pub async fn open_serial_port_intern(
                     if let Err(err) = app_state.add_packet(&packet).await {
                         tracing::error!(%err, from=%name, "Error adding packet to app state");
 
-                        // TODO: Emit error
+                        // TODO: Emit non-fatal error
                     }
 
                     let event = PacketEvent {
