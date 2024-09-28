@@ -36,7 +36,7 @@ pub enum AvailablePortsError {
     ),
 }
 
-/// Returns a list of all serial ports on system mapped to [`SerialPort`].
+/// Returns a list of all serial ports on system mapped to [`CoreSerialPort`].
 pub fn available_ports() -> Result<Vec<CoreSerialPort>, AvailablePortsError> {
     Ok(tokio_serial::available_ports()?
         .into_iter()

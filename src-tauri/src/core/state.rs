@@ -40,7 +40,7 @@ impl Deref for CoreSerialState {
 }
 
 /// - `Key`: Serial port name.
-/// - `Value`: Open serial port [`OpenSerialPort`].
+/// - `Value`: Open serial port [`CoreOpenSerialPort`].
 type OpenSerialPorts = HashMap<String, CoreOpenSerialPort>;
 
 /// - `Key`: Master Serial port name.

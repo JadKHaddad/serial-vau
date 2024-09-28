@@ -15,7 +15,7 @@ pub enum CoreManagedSerialPortsError {
     ),
 }
 
-/// Error emitted by [`State::open_serial_port`](crate::core::state::State::open_serial_port) through the channel.
+/// Error emitted by [`CoreSerialState::open_serial_port`](crate::core::state::CoreSerialState::open_serial_port) through the channel.
 #[derive(Debug, thiserror::Error)]
 pub enum CorePacketError {
     #[error("Incoming packet error: {0}")]
@@ -32,7 +32,7 @@ pub enum CorePacketError {
     ),
 }
 
-/// Internal part of [`PacketError`].
+/// Internal part of [`CorePacketError`].
 #[derive(Debug, thiserror::Error)]
 pub enum CoreIncomingPacketError {
     #[error("An IO error occurred: {0}")]
@@ -49,7 +49,7 @@ pub enum CoreIncomingPacketError {
     ),
 }
 
-/// Internal part of [`PacketError`].
+/// Internal part of [`CorePacketError`].
 #[derive(Debug, thiserror::Error)]
 pub enum CoreOutgoingPacketError {
     #[error("An IO error occurred: {0}")]
@@ -60,7 +60,7 @@ pub enum CoreOutgoingPacketError {
     ),
 }
 
-/// Error returned by [`State::open_serial_port`](crate::core::state::State::open_serial_port).
+/// Error returned by [`CoreSerialState::open_serial_port`](crate::core::state::CoreSerialState::open_serial_port).
 #[derive(Debug, thiserror::Error)]
 pub enum CoreOpenSerialPortError {
     #[error("Failed to get managed ports: {0}")]
