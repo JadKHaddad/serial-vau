@@ -10,6 +10,8 @@ use crate::{
 
 use super::model::managed_serial_port::ManagedSerialPort;
 
+// TODO: move the logic from this State to app::State and make SerialState a private part of app::State.
+
 #[derive(Debug, Default, Clone)]
 pub struct TauriAppState {
     inner: Arc<StateInner>,
