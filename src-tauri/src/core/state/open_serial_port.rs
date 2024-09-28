@@ -10,7 +10,7 @@ use crate::core::serial::managed_serial_port::CoreReadState;
 
 use super::CoreSerialPort;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum CoreDataBits {
     Five,
     Six,
@@ -19,7 +19,7 @@ pub enum CoreDataBits {
     Eight,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum CoreFlowControl {
     #[default]
     None,
@@ -27,7 +27,7 @@ pub enum CoreFlowControl {
     Hardware,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum CoreParity {
     #[default]
     None,
@@ -35,7 +35,7 @@ pub enum CoreParity {
     Even,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum CoreStopBits {
     #[default]
     One,
@@ -43,7 +43,7 @@ pub enum CoreStopBits {
 }
 
 /// Describes how a given serial port should be open.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CoreOpenSerialPortOptions {
     /// Defines the [`ReadState`] of a serial port before it is even open.
     pub initial_read_state: CoreReadState,
@@ -119,7 +119,7 @@ impl Default for CorePacketDirection {
 }
 
 /// Packet emitted by [`AppState::open_serial_port`](crate::core::state::AppState::open_serial_port) through the channel.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CorePacket {
     pub packet_direction: CorePacketDirection,
     /// The name of the corresponding serial port.

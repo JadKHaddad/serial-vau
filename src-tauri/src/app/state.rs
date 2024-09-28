@@ -1,12 +1,16 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::collections::HashMap;
 
 use error::{
     AppAddOrUpdateOpenSerialPortOptionsError, AppAddPacketError, AppGetOpenSerialPortOptionsError,
 };
 
-use crate::core::state::open_serial_port::{CoreOpenSerialPortOptions, CorePacket};
+use crate::core::state::{
+    error::CoreManagedSerialPortsError,
+    open_serial_port::{CoreOpenSerialPortOptions, CorePacket},
+    CoreSerialState,
+};
 
-use super::model::{open_serial_port_options::AppOpenSerialPortOptions, packet::AppPacket};
+use super::model::managed_serial_port::AppManagedSerialPort;
 
 pub mod error;
 
@@ -14,22 +18,19 @@ pub mod error;
 
 /// Intended to save the packets and open options for serial ports.
 #[derive(Debug, Default, Clone)]
-pub struct State {
-    inner: Arc<StateInner>,
+pub struct AppState {
+    serial_state: CoreSerialState,
 }
 
-impl Deref for State {
-    type Target = StateInner;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+impl AppState {
+    pub fn new(serial_state: CoreSerialState) -> Self {
+        Self { serial_state }
     }
-}
 
-#[derive(Debug, Default)]
-pub struct StateInner {}
+    pub fn serial_state(&self) -> &CoreSerialState {
+        &self.serial_state
+    }
 
-impl StateInner {
     /// Add the `packet` to the internal buffer and flush it to the database eventually.
     pub async fn add_packet(&self, packet: &CorePacket) -> Result<(), AppAddPacketError> {
         // TODO: Implement this.
@@ -38,10 +39,10 @@ impl StateInner {
     }
 
     /// Get the packets for the `port_name`.
-    pub async fn get_packets(&self, port_name: &str) -> Result<AppPacket, AppAddPacketError> {
+    pub async fn get_packets(&self, port_name: &str) -> Result<CorePacket, AppAddPacketError> {
         // TODO: Implement this.
 
-        Ok(AppPacket::default())
+        Ok(CorePacket::default())
     }
 
     /// If the `open_options` already exists, update it. and save it to the database.
@@ -60,10 +61,10 @@ impl StateInner {
     pub async fn get_open_serial_port_options(
         &self,
         port_name: &str,
-    ) -> Result<AppOpenSerialPortOptions, AppGetOpenSerialPortOptionsError> {
+    ) -> Result<CoreOpenSerialPortOptions, AppGetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
-        Ok(AppOpenSerialPortOptions::default())
+        Ok(CoreOpenSerialPortOptions::default())
     }
 
     /// Get all the open options for all the open serial ports.
@@ -71,9 +72,49 @@ impl StateInner {
     /// Returns a map of the port name to the open options.
     pub async fn get_all_open_serial_port_options(
         &self,
-    ) -> Result<HashMap<String, AppOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {
+    ) -> Result<HashMap<String, CoreOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
         Ok(HashMap::new())
     }
+
+    pub async fn get_managed_serial_ports(
+        &self,
+    ) -> Result<Vec<AppManagedSerialPort>, AppManagedSerialPortsError> {
+        let managed_serial_ports = self.serial_state().managed_serial_ports().await?;
+        let open_serial_port_options = self.get_all_open_serial_port_options().await?;
+
+        let managed_serial_ports = managed_serial_ports
+            .into_iter()
+            .map(|port| {
+                let last_used_open_options = open_serial_port_options
+                    .get(&port.name)
+                    .cloned()
+                    .unwrap_or_default();
+
+                AppManagedSerialPort {
+                    managed_serial_port: port,
+                    last_used_open_options,
+                }
+            })
+            .collect();
+
+        Ok(managed_serial_ports)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AppManagedSerialPortsError {
+    #[error("Failed to get managed ports: {0}")]
+    ManagedSerialPortsError(
+        #[source]
+        #[from]
+        CoreManagedSerialPortsError,
+    ),
+    #[error("Failed to get open serial port options: {0}")]
+    GetOpenSerialPortOptionsError(
+        #[source]
+        #[from]
+        AppGetOpenSerialPortOptionsError,
+    ),
 }

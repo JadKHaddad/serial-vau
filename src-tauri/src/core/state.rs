@@ -27,11 +27,11 @@ pub mod error;
 pub mod open_serial_port;
 
 #[derive(Debug, Clone, Default)]
-pub struct State {
+pub struct CoreSerialState {
     inner: Arc<StateInner>,
 }
 
-impl Deref for State {
+impl Deref for CoreSerialState {
     type Target = StateInner;
 
     fn deref(&self) -> &Self::Target {
@@ -356,7 +356,7 @@ impl StateInner {
     }
 }
 
-impl State {
+impl CoreSerialState {
     /// ## Locks
     ///
     /// - Write: [`StateInner::open_serial_ports`]. Inherited from [`StateInner::add_open_serial_port`].

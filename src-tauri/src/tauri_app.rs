@@ -14,7 +14,7 @@ use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPort
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::{app::state::State as AppState, core::state::State as SerialState};
+use crate::app::state::AppState;
 
 mod command;
 mod error;
@@ -120,9 +120,8 @@ fn do_error() -> Result<(), AppError> {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let serial_state = SerialState::default();
     let app_state = AppState::default();
-    let tauri_app_state = TauriAppState::new(serial_state, app_state);
+    let tauri_app_state = TauriAppState::new(app_state);
     
     let tauri_app_state_wachter = tauri_app_state.clone();
     tauri::Builder::default()

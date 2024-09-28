@@ -1,6 +1,7 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
+    app::state::AppManagedSerialPortsError,
     core::state::{
         error::{CoreIncomingPacketError, CoreOpenSerialPortError, CorePacketError},
         open_serial_port::CoreOpenSerialPortOptions,
@@ -8,7 +9,7 @@ use crate::{
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
-        state::{TauriAppState, TauriAppStateManagedSerialPortsError},
+        state::TauriAppState,
     },
 };
 
@@ -99,6 +100,6 @@ pub enum OpenSerialPortError {
     ManagedSerialPortsError(
         #[source]
         #[from]
-        TauriAppStateManagedSerialPortsError,
+        AppManagedSerialPortsError,
     ),
 }

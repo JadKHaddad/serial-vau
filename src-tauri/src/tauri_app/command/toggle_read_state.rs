@@ -1,6 +1,6 @@
-use crate::tauri_app::{
-    model::managed_serial_port::ManagedSerialPort,
-    state::{TauriAppState, TauriAppStateManagedSerialPortsError},
+use crate::{
+    app::state::AppManagedSerialPortsError,
+    tauri_app::{model::managed_serial_port::ManagedSerialPort, state::TauriAppState},
 };
 
 pub async fn toggle_read_state_intern(
@@ -28,6 +28,6 @@ pub enum ToggleReadStateError {
     ManagedSerialPortsError(
         #[source]
         #[from]
-        TauriAppStateManagedSerialPortsError,
+        AppManagedSerialPortsError,
     ),
 }

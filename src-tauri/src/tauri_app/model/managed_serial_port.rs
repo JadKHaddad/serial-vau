@@ -40,10 +40,10 @@ pub struct ManagedSerialPort {
 
 mod core_impl {
     use super::*;
-    use crate::core::serial::managed_serial_port::{
-        CoreManagedSerialPort, CoreOpenStatus, CoreReadState, Status as CoreStatus,
+    use crate::{
+        app::model::managed_serial_port::AppManagedSerialPort,
+        core::serial::managed_serial_port::{CoreOpenStatus, CoreReadState, Status as CoreStatus},
     };
-    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions;
 
     impl From<CoreOpenStatus> for OpenStatus {
         fn from(value: CoreOpenStatus) -> Self {
@@ -97,23 +97,17 @@ mod core_impl {
         }
     }
 
-    impl From<(CoreManagedSerialPort, OpenSerialPortOptions)> for ManagedSerialPort {
-        fn from(value: (CoreManagedSerialPort, OpenSerialPortOptions)) -> Self {
+    impl From<AppManagedSerialPort> for ManagedSerialPort {
+        fn from(value: AppManagedSerialPort) -> Self {
             Self {
-                name: value.0.name,
-                status: value.0.status.into(),
+                name: value.managed_serial_port.name,
+                status: value.managed_serial_port.status.into(),
                 #[cfg(feature = "subscriptions")]
-                subscriptions: value.0.subscriptions,
+                subscriptions: value.managed_serial_port.subscriptions,
                 #[cfg(feature = "subscriptions")]
-                subscribed_to: value.0.subscribed_to,
-                last_used_open_options: value.1,
+                subscribed_to: value.managed_serial_port.subscribed_to,
+                last_used_open_options: value.last_used_open_options.into(),
             }
-        }
-    }
-
-    impl From<(CoreManagedSerialPort, CoreOpenSerialPortOptions)> for ManagedSerialPort {
-        fn from(value: (CoreManagedSerialPort, CoreOpenSerialPortOptions)) -> Self {
-            ManagedSerialPort::from((value.0, OpenSerialPortOptions::from(value.1)))
         }
     }
 }
