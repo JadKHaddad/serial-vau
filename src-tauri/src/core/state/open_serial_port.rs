@@ -43,7 +43,7 @@ pub enum StopBits {
 }
 
 /// Describes how a given serial port should be open.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct OpenSerialPortOptions {
     /// Defines the [`ReadState`] of a serial port before it is even open.
     pub initial_read_state: ReadState,

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::open_options::OpenSerialPortOptions;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ReadState {
@@ -30,11 +32,10 @@ pub struct ManagedSerialPort {
     pub subscriptions: Vec<String>,
     #[cfg(feature = "subscriptions")]
     pub subscribed_to: Vec<String>,
-    // TODO
-    // pub open_options: These are the saved open options for this serial port. if not saved, then default. For creating the default use CoreOpenSerialPortOptions::default() then convert to OpenSerialPortOptions
-    // update the front end type
-    // remove port name from the open options
-    // make the name a separate function argument
+    /// The last known used open options for the serial port.
+    ///
+    /// If not known, then default options are used.
+    pub last_used_open_options: OpenSerialPortOptions,
 }
 
 mod core_impl {
@@ -43,6 +44,7 @@ mod core_impl {
         ManagedSerialPort as CoreManagedSerialPort, OpenStatus as CoreOpenStatus,
         ReadState as CoreReadState, Status as CoreStatus,
     };
+    use crate::core::state::open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions;
 
     impl From<CoreOpenStatus> for OpenStatus {
         fn from(value: CoreOpenStatus) -> Self {
@@ -96,16 +98,23 @@ mod core_impl {
         }
     }
 
-    impl From<CoreManagedSerialPort> for ManagedSerialPort {
-        fn from(value: CoreManagedSerialPort) -> Self {
+    impl From<(CoreManagedSerialPort, OpenSerialPortOptions)> for ManagedSerialPort {
+        fn from(value: (CoreManagedSerialPort, OpenSerialPortOptions)) -> Self {
             Self {
-                name: value.name,
-                status: value.status.into(),
+                name: value.0.name,
+                status: value.0.status.into(),
                 #[cfg(feature = "subscriptions")]
-                subscriptions: value.subscriptions,
+                subscriptions: value.0.subscriptions,
                 #[cfg(feature = "subscriptions")]
-                subscribed_to: value.subscribed_to,
+                subscribed_to: value.0.subscribed_to,
+                last_used_open_options: value.1,
             }
+        }
+    }
+
+    impl From<(CoreManagedSerialPort, CoreOpenSerialPortOptions)> for ManagedSerialPort {
+        fn from(value: (CoreManagedSerialPort, CoreOpenSerialPortOptions)) -> Self {
+            ManagedSerialPort::from((value.0, OpenSerialPortOptions::from(value.1)))
         }
     }
 }
@@ -113,6 +122,8 @@ mod core_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::core::state::open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions;
 
     #[test]
     #[ignore = "Only used for manual verification"]
@@ -126,6 +137,7 @@ mod tests {
             subscriptions: vec!["COM2".to_string()],
             #[cfg(feature = "subscriptions")]
             subscribed_to: vec!["COM3".to_string()],
+            last_used_open_options: CoreOpenSerialPortOptions::default().into(),
         };
 
         let serialized = serde_json::to_string_pretty(&managed_serial_port).unwrap();
@@ -143,6 +155,7 @@ mod tests {
             subscriptions: vec!["COM2".to_string()],
             #[cfg(feature = "subscriptions")]
             subscribed_to: vec!["COM3".to_string()],
+            last_used_open_options: CoreOpenSerialPortOptions::default().into(),
         };
 
         let serialized = serde_json::to_string_pretty(&managed_serial_port).unwrap();

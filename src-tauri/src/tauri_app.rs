@@ -11,7 +11,7 @@ use command::{
 use error::AppError;
 use event::emit_managed_serial_ports::emit_managed_serial_ports;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
-use state::State as TauriAppState;
+use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
 use crate::{app::state::State as AppState, core::state::State as SerialState};
@@ -27,7 +27,7 @@ mod state;
 pub async fn get_serial_ports(
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    get_serial_ports_intern(state.serial_state())
+    get_serial_ports_intern(&state)
         .await
         .map_err(Into::into)
 }
@@ -51,7 +51,7 @@ pub async fn close_serial_port(
     name: String,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    close_serial_port_intern(name, state.serial_state())
+    close_serial_port_intern(name, &state)
         .await
         .map_err(Into::into)
 }
@@ -85,7 +85,7 @@ pub async fn subscribe(
     to: &str,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    subscribe_intern(from, to, state.serial_state())
+    subscribe_intern(from, to, &state)
         .await
         .map_err(Into::into)
 }
@@ -97,7 +97,7 @@ pub async fn unsubscribe(
     to: &str,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    unsubscribe_intern(from, to, state.serial_state())
+    unsubscribe_intern(from, to, &state)
         .await
         .map_err(Into::into)
 }
@@ -108,7 +108,7 @@ pub async fn toggle_read_state(
     name: &str,
     state: State<'_, TauriAppState>,
 ) -> Result<Vec<ManagedSerialPort>, AppError> {
-    toggle_read_state_intern(name, state.serial_state())
+    toggle_read_state_intern(name, &state)
         .await
         .map_err(Into::into)
 }
@@ -121,11 +121,10 @@ fn do_error() -> Result<(), AppError> {
 
 pub fn run() -> anyhow::Result<()> {
     let serial_state = SerialState::default();
-    let serial_state_watcher = serial_state.clone();
-
     let app_state = AppState::default();
-
     let tauri_app_state = TauriAppState::new(serial_state, app_state);
+    
+    let tauri_app_state_wachter = tauri_app_state.clone();
     tauri::Builder::default()
         .manage(tauri_app_state)
         .setup(|app| {
@@ -164,7 +163,7 @@ pub fn run() -> anyhow::Result<()> {
                                     },
                                 }
 
-                                let _ = emit_managed_serial_ports(&app_handle, &serial_state_watcher).await;
+                                let _ = emit_managed_serial_ports(&app_handle, &tauri_app_state_wachter).await;
                             }
 
                             tracing::debug!("Serial events watcher terminated");

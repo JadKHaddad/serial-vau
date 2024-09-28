@@ -1,6 +1,7 @@
 /// Defines if an open serial port is currently reading or stopped.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum ReadState {
+    #[default]
     Read,
     Stop,
 }

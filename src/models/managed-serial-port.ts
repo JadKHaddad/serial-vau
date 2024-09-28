@@ -1,3 +1,5 @@
+import { OpenSerialPortOptions } from "./open-options";
+
 export type Status =
     | { type: StatusType.Closed }
     | { type: StatusType.Open; content: OpenStatus };
@@ -21,6 +23,7 @@ export type ManagedSerialPort = {
     status: Status;
     subscriptions: string[];
     subscribedTo: string[];
+    lastUsedOpenOptions: OpenSerialPortOptions;
 }
 
 export type IncomigPacket = {

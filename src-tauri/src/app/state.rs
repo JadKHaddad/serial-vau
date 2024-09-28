@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use error::{AddOrUpdateOpenSerialPortOptionsError, AddPacketError, GetOpenSerialPortOptionsError};
 
@@ -64,5 +64,16 @@ impl StateInner {
         // TODO: Implement this.
 
         Ok(OpenSerialPortOptions::default())
+    }
+
+    /// Get all the open options for all the open serial ports.
+    ///
+    /// Returns a map of the port name to the open options.
+    pub async fn get_all_open_serial_port_options(
+        &self,
+    ) -> Result<HashMap<String, OpenSerialPortOptions>, GetOpenSerialPortOptionsError> {
+        // TODO: Implement this.
+
+        Ok(HashMap::new())
     }
 }

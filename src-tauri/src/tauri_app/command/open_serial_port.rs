@@ -2,16 +2,13 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     core::state::{
-        error::{
-            IncomingPacketError, ManagedSerialPortsError,
-            OpenSerialPortError as CoreOpenSerialPortError, PacketError,
-        },
+        error::{IncomingPacketError, OpenSerialPortError as CoreOpenSerialPortError, PacketError},
         open_serial_port::OpenSerialPortOptions as CoreOpenSerialPortOptions,
     },
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
-        state::State as TauriAppState,
+        state::{TauriAppState, TauriAppStateManagedSerialPortsError},
     },
 };
 
@@ -43,7 +40,7 @@ pub async fn open_serial_port_intern(
 
     let app = app.clone();
 
-    let serial_state = state.serial_state().clone();
+    let tauri_app_state = state.clone();
     let app_state = state.app_state().clone();
     tokio::spawn(async move {
         tracing::debug!(name=%name, "Read events task started");
@@ -75,7 +72,7 @@ pub async fn open_serial_port_intern(
                         // Decoding lines error will not break the read loop in `State.open_serial_port`.
                         PacketError::Incoming(IncomingPacketError::Codec(..)) => {}
                         _ => {
-                            let _ = emit_managed_serial_ports(&app, &serial_state).await;
+                            let _ = emit_managed_serial_ports(&app, &tauri_app_state).await;
                         }
                     }
                 }
@@ -85,8 +82,7 @@ pub async fn open_serial_port_intern(
         tracing::debug!(name=%name, "Read events task terminated");
     });
 
-    let managed_serial_ports = state.serial_state().managed_serial_ports().await?;
-    let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
+    let managed_serial_ports = state.get_managed_serial_ports().await?;
 
     Ok(managed_serial_ports)
 }
@@ -103,6 +99,6 @@ pub enum OpenSerialPortError {
     ManagedSerialPortsError(
         #[source]
         #[from]
-        ManagedSerialPortsError,
+        TauriAppStateManagedSerialPortsError,
     ),
 }
