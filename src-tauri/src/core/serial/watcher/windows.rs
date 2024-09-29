@@ -6,12 +6,12 @@ use futures::{stream::select, Stream, StreamExt};
 use serde::Deserialize;
 use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
 
-use super::super::SerialPort;
+use super::super::CoreSerialPort;
 
 #[derive(Debug)]
 pub struct SerialPortEvent {
     pub event_type: SerialEventType,
-    pub serial_port: SerialPort,
+    pub serial_port: CoreSerialPort,
 }
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ struct SerialDeletion {
     target_instance: Win32SerialPortEvent,
 }
 
-impl From<SerialDeletion> for SerialPort {
+impl From<SerialDeletion> for CoreSerialPort {
     fn from(value: SerialDeletion) -> Self {
         Self::new(value.target_instance.name)
     }
@@ -47,7 +47,7 @@ struct SerialCreation {
     target_instance: Win32SerialPortEvent,
 }
 
-impl From<SerialCreation> for SerialPort {
+impl From<SerialCreation> for CoreSerialPort {
     fn from(value: SerialCreation) -> Self {
         Self::new(value.target_instance.name)
     }
@@ -191,7 +191,7 @@ mod test {
                 .filter_map(|event| async move { event.ok() })
                 .map(|event| SerialPortEvent {
                     event_type: SerialEventType::Deletion,
-                    serial_port: SerialPort::new(event.target_instance.name),
+                    serial_port: CoreSerialPort::new(event.target_instance.name),
                 });
 
             let mut filters = HashMap::<String, FilterValue>::new();
@@ -210,7 +210,7 @@ mod test {
                 .filter_map(|event| async move { event.ok() })
                 .map(|event| SerialPortEvent {
                     event_type: SerialEventType::Creation,
-                    serial_port: SerialPort::new(event.target_instance.name),
+                    serial_port: CoreSerialPort::new(event.target_instance.name),
                 });
 
             async move {

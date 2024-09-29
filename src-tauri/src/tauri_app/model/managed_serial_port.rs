@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::open_options::OpenSerialPortOptions;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ReadState {
@@ -30,13 +32,17 @@ pub struct ManagedSerialPort {
     pub subscriptions: Vec<String>,
     #[cfg(feature = "subscriptions")]
     pub subscribed_to: Vec<String>,
+    /// The last known used open options for the serial port.
+    ///
+    /// If not known, then default options are used.
+    pub last_used_open_options: OpenSerialPortOptions,
 }
 
 mod core_impl {
     use super::*;
-    use crate::core::serial::managed_serial_port::{
-        ManagedSerialPort as CoreManagedSerialPort, OpenStatus as CoreOpenStatus,
-        ReadState as CoreReadState, Status as CoreStatus,
+    use crate::{
+        app::model::managed_serial_port::AppManagedSerialPort,
+        core::serial::managed_serial_port::{CoreOpenStatus, CoreReadState, Status as CoreStatus},
     };
 
     impl From<CoreOpenStatus> for OpenStatus {
@@ -91,15 +97,16 @@ mod core_impl {
         }
     }
 
-    impl From<CoreManagedSerialPort> for ManagedSerialPort {
-        fn from(value: CoreManagedSerialPort) -> Self {
+    impl From<AppManagedSerialPort> for ManagedSerialPort {
+        fn from(value: AppManagedSerialPort) -> Self {
             Self {
-                name: value.name,
-                status: value.status.into(),
+                name: value.managed_serial_port.name,
+                status: value.managed_serial_port.status.into(),
                 #[cfg(feature = "subscriptions")]
-                subscriptions: value.subscriptions,
+                subscriptions: value.managed_serial_port.subscriptions,
                 #[cfg(feature = "subscriptions")]
-                subscribed_to: value.subscribed_to,
+                subscribed_to: value.managed_serial_port.subscribed_to,
+                last_used_open_options: value.last_used_open_options.into(),
             }
         }
     }
@@ -108,6 +115,8 @@ mod core_impl {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions;
 
     #[test]
     #[ignore = "Only used for manual verification"]
@@ -121,6 +130,7 @@ mod tests {
             subscriptions: vec!["COM2".to_string()],
             #[cfg(feature = "subscriptions")]
             subscribed_to: vec!["COM3".to_string()],
+            last_used_open_options: CoreOpenSerialPortOptions::default().into(),
         };
 
         let serialized = serde_json::to_string_pretty(&managed_serial_port).unwrap();
@@ -138,6 +148,7 @@ mod tests {
             subscriptions: vec!["COM2".to_string()],
             #[cfg(feature = "subscriptions")]
             subscribed_to: vec!["COM3".to_string()],
+            last_used_open_options: CoreOpenSerialPortOptions::default().into(),
         };
 
         let serialized = serde_json::to_string_pretty(&managed_serial_port).unwrap();

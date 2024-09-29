@@ -4,11 +4,11 @@ pub mod managed_serial_port;
 pub mod watcher;
 
 #[derive(Debug, Clone)]
-pub struct SerialPort {
+pub struct CoreSerialPort {
     name: String,
 }
 
-impl SerialPort {
+impl CoreSerialPort {
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -18,7 +18,7 @@ impl SerialPort {
     }
 }
 
-impl From<SerialPortInfo> for SerialPort {
+impl From<SerialPortInfo> for CoreSerialPort {
     fn from(value: SerialPortInfo) -> Self {
         Self {
             name: value.port_name,
@@ -36,8 +36,8 @@ pub enum AvailablePortsError {
     ),
 }
 
-/// Returns a list of all serial ports on system mapped to [`SerialPort`].
-pub fn available_ports() -> Result<Vec<SerialPort>, AvailablePortsError> {
+/// Returns a list of all serial ports on system mapped to [`CoreSerialPort`].
+pub fn available_ports() -> Result<Vec<CoreSerialPort>, AvailablePortsError> {
     Ok(tokio_serial::available_ports()?
         .into_iter()
         .map(Into::into)

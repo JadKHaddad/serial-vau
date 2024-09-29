@@ -1,18 +1,16 @@
 use crate::{
-    core::state::{error::ManagedSerialPortsError, State},
-    tauri_app::model::managed_serial_port::ManagedSerialPort,
+    app::state::AppManagedSerialPortsError,
+    tauri_app::{model::managed_serial_port::ManagedSerialPort, state::TauriAppState},
 };
 
 pub async fn get_serial_ports_intern(
-    state: &State,
+    state: &TauriAppState,
 ) -> Result<Vec<ManagedSerialPort>, GetSerialPortsError> {
     tracing::info!("Getting serial ports");
 
-    let managed_serial_ports = state.managed_serial_ports().await?;
+    let managed_serial_ports = state.get_managed_serial_ports().await?;
 
     tracing::debug!(?managed_serial_ports);
-
-    let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
 
     Ok(managed_serial_ports)
 }
@@ -23,6 +21,6 @@ pub enum GetSerialPortsError {
     ManagedSerialPortsError(
         #[source]
         #[from]
-        ManagedSerialPortsError,
+        AppManagedSerialPortsError,
     ),
 }

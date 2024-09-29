@@ -1,21 +1,21 @@
 use crate::{
-    core::state::{error::ManagedSerialPortsError, State},
-    tauri_app::model::managed_serial_port::ManagedSerialPort,
+    app::state::AppManagedSerialPortsError,
+    tauri_app::{model::managed_serial_port::ManagedSerialPort, state::TauriAppState},
 };
 
 pub async fn toggle_read_state_intern(
     name: &str,
-    state: &State,
+    state: &TauriAppState,
 ) -> Result<Vec<ManagedSerialPort>, ToggleReadStateError> {
     tracing::info!(name=%name, "Toggling read state");
 
     state
+        .serial_state()
         .toggle_read_state(name)
         .await
         .ok_or(ToggleReadStateError::NotOpen)?;
 
-    let managed_serial_ports = state.managed_serial_ports().await?;
-    let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
+    let managed_serial_ports = state.get_managed_serial_ports().await?;
 
     Ok(managed_serial_ports)
 }
@@ -28,6 +28,6 @@ pub enum ToggleReadStateError {
     ManagedSerialPortsError(
         #[source]
         #[from]
-        ManagedSerialPortsError,
+        AppManagedSerialPortsError,
     ),
 }

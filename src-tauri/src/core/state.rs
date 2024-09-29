@@ -1,13 +1,13 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use error::{ManagedSerialPortsError, OpenSerialPortError, PacketError};
+use error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError};
 use futures::{SinkExt, StreamExt};
 use open_serial_port::{
-    IncomingPacket, OpenSerialPort, OpenSerialPortOptions, OutgoingPacket, Packet, PacketDirection,
-    SendError,
+    CoreIncomingPacket, CoreOpenSerialPort, CoreOpenSerialPortOptions, CoreOutgoingPacket,
+    CorePacket, CorePacketDirection, SendError,
 };
 #[cfg(feature = "subscriptions")]
-use open_serial_port::{PacketOrigin, SubscriptionPacketOrigin, TxHandle};
+use open_serial_port::{CorePacketOrigin, CoreSubscriptionPacketOrigin, TxHandle};
 use tokio::sync::{mpsc::UnboundedReceiver as MPSCUnboundedReceiver, RwLock};
 use tokio_serial::SerialPortBuilderExt;
 use tokio_util::{
@@ -19,19 +19,19 @@ use tokio_util::{
 use super::codec::lines_codec::LinesCodec;
 
 use super::serial::{
-    managed_serial_port::{ManagedSerialPort, OpenStatus, Status},
-    SerialPort,
+    managed_serial_port::{CoreManagedSerialPort, CoreOpenStatus, Status},
+    CoreSerialPort,
 };
 
 pub mod error;
 pub mod open_serial_port;
 
 #[derive(Debug, Clone, Default)]
-pub struct State {
+pub struct CoreSerialState {
     inner: Arc<StateInner>,
 }
 
-impl Deref for State {
+impl Deref for CoreSerialState {
     type Target = StateInner;
 
     fn deref(&self) -> &Self::Target {
@@ -40,8 +40,8 @@ impl Deref for State {
 }
 
 /// - `Key`: Serial port name.
-/// - `Value`: Open serial port [`OpenSerialPort`].
-type OpenSerialPorts = HashMap<String, OpenSerialPort>;
+/// - `Value`: Open serial port [`CoreOpenSerialPort`].
+type OpenSerialPorts = HashMap<String, CoreOpenSerialPort>;
 
 /// - `Key`: Master Serial port name.
 /// - `Value`:  
@@ -82,7 +82,7 @@ impl StateInner {
     )]
     pub async fn managed_serial_ports(
         &self,
-    ) -> Result<Vec<ManagedSerialPort>, ManagedSerialPortsError> {
+    ) -> Result<Vec<CoreManagedSerialPort>, CoreManagedSerialPortsError> {
         let available_serial_ports = super::serial::available_ports()?;
         let open_serial_ports = self.open_serial_ports.read().await;
         #[cfg(feature = "subscriptions")]
@@ -106,7 +106,7 @@ impl StateInner {
                     .map(|(name, _)| name.clone())
                     .collect();
 
-                let mut managed_serial_port = ManagedSerialPort {
+                let mut managed_serial_port = CoreManagedSerialPort {
                     name: port.name().to_string(),
                     status: Status::Closed,
                     #[cfg(feature = "subscriptions")]
@@ -116,7 +116,7 @@ impl StateInner {
                 };
 
                 if let Some(open_serial_port) = open_serial_ports.get(port.name()) {
-                    managed_serial_port.status = Status::Open(OpenStatus {
+                    managed_serial_port.status = Status::Open(CoreOpenStatus {
                         read_state: open_serial_port.read_state(),
                     });
                 }
@@ -141,8 +141,8 @@ impl StateInner {
     )]
     async fn add_open_serial_port(
         &self,
-        open_serial_port: OpenSerialPort,
-    ) -> Option<OpenSerialPort> {
+        open_serial_port: CoreOpenSerialPort,
+    ) -> Option<CoreOpenSerialPort> {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port");
 
         #[cfg(feature = "subscriptions")]
@@ -165,7 +165,7 @@ impl StateInner {
     #[cfg(feature = "subscriptions")]
     async fn add_open_serial_port_to_pending_subscriptions(
         &self,
-        open_serial_port: &OpenSerialPort,
+        open_serial_port: &CoreOpenSerialPort,
     ) {
         tracing::debug!(name=%open_serial_port.name(), "Adding serial port to pending subscriptions");
 
@@ -209,7 +209,7 @@ impl StateInner {
     "
     )]
     /// - Write: [`Self::open_serial_ports`].
-    async fn remove_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+    async fn remove_open_serial_port(&self, name: &str) -> Option<CoreOpenSerialPort> {
         tracing::debug!(name=%name, "Removing serial port");
 
         #[cfg(feature = "subscriptions")]
@@ -229,10 +229,13 @@ impl StateInner {
     "
     )]
     /// - Write: [`Self::open_serial_ports`]. Inherited from [`Self::remove_open_serial_port`].
-    pub async fn remove_and_cancel_open_serial_port(&self, name: &str) -> Option<OpenSerialPort> {
+    pub async fn remove_and_cancel_open_serial_port(
+        &self,
+        name: &str,
+    ) -> Option<CoreOpenSerialPort> {
         self.remove_open_serial_port(name)
             .await
-            .map(OpenSerialPort::cancelled)
+            .map(CoreOpenSerialPort::cancelled)
     }
 
     /// - `Ok(Some(bool))` => Port found.
@@ -247,7 +250,10 @@ impl StateInner {
 - Read: [`Self::subscriptions`].
     "
     )]
-    async fn is_port_closed(&self, name: &str) -> Result<Option<bool>, ManagedSerialPortsError> {
+    async fn is_port_closed(
+        &self,
+        name: &str,
+    ) -> Result<Option<bool>, CoreManagedSerialPortsError> {
         let managed_serial_ports = self.managed_serial_ports().await?;
         let managed_serial_port = managed_serial_ports.iter().find(|port| port.name == name);
 
@@ -264,7 +270,7 @@ impl StateInner {
     pub async fn send_to_open_serial_port(
         &self,
         name: &str,
-        packet: OutgoingPacket,
+        packet: CoreOutgoingPacket,
     ) -> Option<Result<(), SendError>> {
         Some(self.open_serial_ports.read().await.get(name)?.send(packet))
     }
@@ -272,7 +278,7 @@ impl StateInner {
     /// ## Locks
     ///
     /// - Read: [`Self::open_serial_ports`].
-    pub async fn send_to_all_open_serial_ports(&self, packet: OutgoingPacket) {
+    pub async fn send_to_all_open_serial_ports(&self, packet: CoreOutgoingPacket) {
         self.open_serial_ports
             .read()
             .await
@@ -350,7 +356,7 @@ impl StateInner {
     }
 }
 
-impl State {
+impl CoreSerialState {
     /// ## Locks
     ///
     /// - Write: [`StateInner::open_serial_ports`]. Inherited from [`StateInner::add_open_serial_port`].
@@ -362,16 +368,18 @@ impl State {
     )]
     pub async fn open_serial_port(
         &self,
-        options: OpenSerialPortOptions,
-    ) -> Result<MPSCUnboundedReceiver<Result<Packet, PacketError>>, OpenSerialPortError> {
+        name: &str,
+        options: CoreOpenSerialPortOptions,
+    ) -> Result<MPSCUnboundedReceiver<Result<CorePacket, CorePacketError>>, CoreOpenSerialPortError>
+    {
         tracing::debug!(?options, "Opening serial port");
 
         let port_to_open_name = self
-            .is_port_closed(&options.name)
+            .is_port_closed(name)
             .await?
-            .ok_or(OpenSerialPortError::NotFound)?
-            .then_some(&options.name)
-            .ok_or(OpenSerialPortError::AlreadyOpen)?;
+            .ok_or(CoreOpenSerialPortError::NotFound)?
+            .then_some(name)
+            .ok_or(CoreOpenSerialPortError::AlreadyOpen)?;
 
         let port = tokio_serial::new(port_to_open_name, options.baud_rate)
             .stop_bits(options.stop_bits.into())
@@ -382,10 +390,10 @@ impl State {
             .open_native_async()?;
 
         let (port_read, port_write) = tokio::io::split(port);
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<OutgoingPacket>();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<CoreOutgoingPacket>();
 
         let (packet_tx, packet_rx) =
-            tokio::sync::mpsc::unbounded_channel::<Result<Packet, PacketError>>();
+            tokio::sync::mpsc::unbounded_channel::<Result<CorePacket, CorePacketError>>();
 
         let cancellation_token = CancellationToken::new();
 
@@ -395,8 +403,8 @@ impl State {
         let (read_state_tx, mut read_state_rx) =
             tokio::sync::watch::channel(options.initial_read_state);
 
-        self.add_open_serial_port(OpenSerialPort::new(
-            SerialPort::new(options.name.clone()),
+        self.add_open_serial_port(CoreOpenSerialPort::new(
+            CoreSerialPort::new(name.into()),
             tx,
             cancellation_token.clone(),
             read_state_tx,
@@ -407,7 +415,7 @@ impl State {
         let subscriptions = self.subscriptions();
         let read_app_state = self.clone();
         let read_cancellation_token = cancellation_token.clone();
-        let read_name = options.name.clone();
+        let read_name = name.to_owned();
         let read_packet_tx = packet_tx.clone();
 
         tokio::spawn(async move {
@@ -445,9 +453,9 @@ impl State {
                                                             if let Some(tx_handle) = tx_handle {
                                                                 tracing::trace!(target: "serial_core::serial::read::byte::subscribe", name=%read_name, subscriber=%subscriber_name, "Sending bytes to subscriber");
 
-                                                                let outgoing_packet = OutgoingPacket {
+                                                                let outgoing_packet = CoreOutgoingPacket {
                                                                     bytes: bytes.clone().into(),
-                                                                    packet_origin: PacketOrigin::Subscription(SubscriptionPacketOrigin{ name: read_name.clone() }),
+                                                                    packet_origin: CorePacketOrigin::Subscription(CoreSubscriptionPacketOrigin{ name: read_name.clone() }),
                                                                 };
 
                                                                 if let Err(err) = tx_handle.send(outgoing_packet) {
@@ -465,9 +473,9 @@ impl State {
                                                             Ok(Some(line)) => {
                                                                 tracing::trace!(target: "serial_core::serial::read::line", name=%read_name, ?line, "Read");
 
-                                                                let packet = Packet::new_with_current_timestamp(
-                                                                    PacketDirection::Incoming(
-                                                                        IncomingPacket {
+                                                                let packet = CorePacket::new_with_current_timestamp(
+                                                                    CorePacketDirection::Incoming(
+                                                                        CoreIncomingPacket {
                                                                             line,
                                                                         }
                                                                     ),
@@ -484,7 +492,7 @@ impl State {
                                                                 tracing::warn!(target: "serial_core::serial::read::line", name=%read_name, %err, "Failed to decode line");
 
                                                                 // Feedback
-                                                                let _ = read_packet_tx.send(Err(PacketError::Incoming(err.into())));
+                                                                let _ = read_packet_tx.send(Err(CorePacketError::Incoming(err.into())));
 
                                                                 // Clear the buffer to prevent further errors.
                                                                 lines_bytes.clear();
@@ -498,7 +506,7 @@ impl State {
                                                     tracing::error!(target: "serial_core::serial::read", name=%read_name, %err);
 
                                                     // Feedback
-                                                    let _ = read_packet_tx.send(Err(PacketError::Incoming(err.into())));
+                                                    let _ = read_packet_tx.send(Err(CorePacketError::Incoming(err.into())));
 
                                                     // Removing the port will drop the sender causing the write loop to break.
                                                     tracing::debug!(target: "serial_core::serial::read", name=%read_name, "Removing serial port due to an error");
@@ -548,7 +556,7 @@ impl State {
             tracing::debug!(target: "serial_core::serial::read", name=%read_name, "Read task terminated")
         });
 
-        let write_name = options.name.clone();
+        let write_name = name.to_owned();
         let write_cancellation_token = cancellation_token;
         let write_packet_tx = packet_tx.clone();
 
@@ -565,9 +573,9 @@ impl State {
                             Ok(_) => {
                                 tracing::trace!(target: "serial_core::serial::write::result", name=%write_name, origin=%packet.packet_origin, "Ok");
 
-                                let packet = Packet::new_with_current_timestamp(
-                                    PacketDirection::Outgoing(
-                                        OutgoingPacket {
+                                let packet = CorePacket::new_with_current_timestamp(
+                                    CorePacketDirection::Outgoing(
+                                        CoreOutgoingPacket {
                                             packet_origin: packet.packet_origin,
                                             bytes: packet.bytes,
                                         }
@@ -584,7 +592,7 @@ impl State {
                                 tracing::error!(target: "serial_core::serial::write::result", name=%write_name, origin=?packet.packet_origin, %err);
 
                                 // Feedback
-                                let _ = write_packet_tx.send(Err(PacketError::Outgoing(err.into())));
+                                let _ = write_packet_tx.send(Err(CorePacketError::Outgoing(err.into())));
 
                                 break;
                             }

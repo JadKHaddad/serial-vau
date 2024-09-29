@@ -60,19 +60,10 @@
                 </v-list>
             </v-menu>
 
-            <v-btn @click="openSerialPort({
-                name: port.name,
-                initialReadState: ReadState.Read,
-                baudRate: 115200,
-                dataBits: DataBits.Eight,
-                flowControl: FlowControl.None,
-                parity: Parity.None,
-                stopBits: StopBits.One,
-                timeout: {
-                    secs: 0,
-                    nanos: 0
-                }
-            })" variant="plain">
+            <v-btn @click="openSerialPort(
+                port.name,
+                port.lastUsedOpenOptions
+            )" variant="plain">
                 Open
             </v-btn>
             <v-btn @click="closeSerialPort" variant="plain">
@@ -88,7 +79,7 @@
 <script lang="ts" setup>
 import { StatusType, ReadState } from '@/models/managed-serial-port';
 import { useAppStore } from '@/stores/app';
-import { OpenSerialPortOptions, DataBits, FlowControl, Parity, StopBits } from '@/models/open-options';
+import { OpenSerialPortOptions, } from '@/models/open-options';
 import { ManagedSerialPort } from '@/models/managed-serial-port';
 
 const props = defineProps<{
@@ -97,8 +88,8 @@ const props = defineProps<{
 
 const app = useAppStore()
 
-const openSerialPort = (options: OpenSerialPortOptions) => {
-    app.openSerialPort(options);
+const openSerialPort = (name: string, options: OpenSerialPortOptions) => {
+    app.openSerialPort(name, options);
 }
 
 const closeSerialPort = () => {

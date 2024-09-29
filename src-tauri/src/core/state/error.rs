@@ -4,9 +4,9 @@ use tokio_serial::Error as TokioSerialError;
 
 use crate::core::{codec::lines_codec::LinesCodecError, serial::AvailablePortsError};
 
-/// Error returned by [`AppStateInner::managed_serial_ports`](crate::core::state::AppStateInner::managed_serial_ports).
+/// Error returned by [`StateInner::managed_serial_ports`](crate::core::state::StateInner::managed_serial_ports).
 #[derive(Debug, thiserror::Error)]
-pub enum ManagedSerialPortsError {
+pub enum CoreManagedSerialPortsError {
     #[error("Failed to get available ports: {0}")]
     AvailablePortsError(
         #[source]
@@ -15,26 +15,26 @@ pub enum ManagedSerialPortsError {
     ),
 }
 
-/// Error emitted by [`AppState::open_serial_port`](crate::core::state::AppState::open_serial_port) through the channel.
+/// Error emitted by [`CoreSerialState::open_serial_port`](crate::core::state::CoreSerialState::open_serial_port) through the channel.
 #[derive(Debug, thiserror::Error)]
-pub enum PacketError {
+pub enum CorePacketError {
     #[error("Incoming packet error: {0}")]
     Incoming(
         #[source]
         #[from]
-        IncomingPacketError,
+        CoreIncomingPacketError,
     ),
     #[error("Outgoing packet error: {0}")]
     Outgoing(
         #[source]
         #[from]
-        OutgoingPacketError,
+        CoreOutgoingPacketError,
     ),
 }
 
-/// Internal part of [`PacketError`].
+/// Internal part of [`CorePacketError`].
 #[derive(Debug, thiserror::Error)]
-pub enum IncomingPacketError {
+pub enum CoreIncomingPacketError {
     #[error("An IO error occurred: {0}")]
     IO(
         #[source]
@@ -49,9 +49,9 @@ pub enum IncomingPacketError {
     ),
 }
 
-/// Internal part of [`PacketError`].
+/// Internal part of [`CorePacketError`].
 #[derive(Debug, thiserror::Error)]
-pub enum OutgoingPacketError {
+pub enum CoreOutgoingPacketError {
     #[error("An IO error occurred: {0}")]
     IO(
         #[source]
@@ -60,14 +60,14 @@ pub enum OutgoingPacketError {
     ),
 }
 
-/// Error returned by [`AppState::open_serial_port`](crate::core::state::AppState::open_serial_port).
+/// Error returned by [`CoreSerialState::open_serial_port`](crate::core::state::CoreSerialState::open_serial_port).
 #[derive(Debug, thiserror::Error)]
-pub enum OpenSerialPortError {
+pub enum CoreOpenSerialPortError {
     #[error("Failed to get managed ports: {0}")]
     ManagedSerialPortsError(
         #[source]
         #[from]
-        ManagedSerialPortsError,
+        CoreManagedSerialPortsError,
     ),
     #[error("Port not found")]
     NotFound,

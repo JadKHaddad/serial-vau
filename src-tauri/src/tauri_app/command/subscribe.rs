@@ -1,21 +1,20 @@
 use crate::{
-    core::state::{error::ManagedSerialPortsError, State},
-    tauri_app::model::managed_serial_port::ManagedSerialPort,
+    app::state::AppManagedSerialPortsError,
+    tauri_app::{model::managed_serial_port::ManagedSerialPort, state::TauriAppState},
 };
 
 pub async fn subscribe_intern(
     from: &str,
     to: &str,
-    _state: &State,
+    _state: &TauriAppState,
 ) -> Result<Vec<ManagedSerialPort>, SubscribeError> {
     tracing::info!(from=%from, to=%to, "Subscribing");
 
     #[cfg(feature = "subscriptions")]
     return {
-        _state.subscribe(from, to).await;
+        _state.serial_state().subscribe(from, to).await;
 
-        let managed_serial_ports = _state.managed_serial_ports().await?;
-        let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
+        let managed_serial_ports = _state.get_managed_serial_ports().await?;
 
         Ok(managed_serial_ports)
     };
@@ -27,16 +26,15 @@ pub async fn subscribe_intern(
 pub async fn unsubscribe_intern(
     from: &str,
     to: &str,
-    _state: &State,
+    _state: &TauriAppState,
 ) -> Result<Vec<ManagedSerialPort>, SubscribeError> {
     tracing::info!(from=%from, to=%to, "Unsubscribing");
 
     #[cfg(feature = "subscriptions")]
     return {
-        _state.unsubscribe(from, to).await;
+        _state.serial_state().unsubscribe(from, to).await;
 
-        let managed_serial_ports = _state.managed_serial_ports().await?;
-        let managed_serial_ports = managed_serial_ports.into_iter().map(Into::into).collect();
+        let managed_serial_ports = _state.get_managed_serial_ports().await?;
 
         Ok(managed_serial_ports)
     };
@@ -56,6 +54,6 @@ pub enum SubscribeError {
     ManagedSerialPortsError(
         #[source]
         #[from]
-        ManagedSerialPortsError,
+        AppManagedSerialPortsError,
     ),
 }

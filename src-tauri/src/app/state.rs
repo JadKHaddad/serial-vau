@@ -1,42 +1,120 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use tokio::sync::RwLock;
+use error::{
+    AppAddOrUpdateOpenSerialPortOptionsError, AppAddPacketError, AppGetOpenSerialPortOptionsError,
+};
 
-use super::model::packet::Packet;
-use crate::core::state::open_serial_port::Packet as CorePacket;
+use crate::core::state::{
+    error::CoreManagedSerialPortsError,
+    open_serial_port::{CoreOpenSerialPortOptions, CorePacket},
+    CoreSerialState,
+};
 
-/// Intended to save the packets for serial ports and then dump them to a file if needed.
-///
-/// ## Note
-///
-/// - May not be needed for tauri app, since the frontend saves the packets and can send them along a dump command.
-/// - Needed for other types of apps, like ratatui or slint.
-#[derive(Debug, Default)]
-pub struct State {
-    packets: RwLock<HashMap<String, Packets>>,
+use super::model::managed_serial_port::AppManagedSerialPort;
+
+pub mod error;
+
+// TODO after implementing the database and adding the models make the models From/Into CoreModels like src-tauri/src/tauri_app/model/managed_serial_port.rs
+
+/// Intended to save the packets and open options for serial ports.
+#[derive(Debug, Default, Clone)]
+pub struct AppState {
+    serial_state: CoreSerialState,
 }
 
-impl State {
-    /// Get or create a list of packets for a given serial port name.
-    pub async fn get_or_create_packets(&self, name: &str) -> Packets {
-        let mut packets = self.packets.write().await;
+impl AppState {
+    pub fn new(serial_state: CoreSerialState) -> Self {
+        Self { serial_state }
+    }
 
-        packets.entry(name.to_string()).or_default().clone()
+    pub fn serial_state(&self) -> &CoreSerialState {
+        &self.serial_state
+    }
+
+    /// Add the `packet` to the internal buffer and flush it to the database eventually.
+    pub async fn add_packet(&self, packet: &CorePacket) -> Result<(), AppAddPacketError> {
+        // TODO: Implement this.
+
+        Ok(())
+    }
+
+    /// Get the packets for the `port_name`.
+    pub async fn get_packets(&self, port_name: &str) -> Result<CorePacket, AppAddPacketError> {
+        // TODO: Implement this.
+
+        Ok(CorePacket::default())
+    }
+
+    /// If the `open_options` already exists, update it. and save it to the database.
+    /// If the `open_options` does not exist, add it and save it to the database.
+    pub async fn add_or_update_open_serial_port_options(
+        &self,
+        port_name: &str,
+        options: &CoreOpenSerialPortOptions,
+    ) -> Result<(), AppAddOrUpdateOpenSerialPortOptionsError> {
+        // TODO: Implement this.
+
+        Ok(())
+    }
+
+    /// Get the open options for the `port_name`.
+    pub async fn get_open_serial_port_options(
+        &self,
+        port_name: &str,
+    ) -> Result<CoreOpenSerialPortOptions, AppGetOpenSerialPortOptionsError> {
+        // TODO: Implement this.
+
+        Ok(CoreOpenSerialPortOptions::default())
+    }
+
+    /// Get all the open options for all the open serial ports.
+    ///
+    /// Returns a map of the port name to the open options.
+    pub async fn get_all_open_serial_port_options(
+        &self,
+    ) -> Result<HashMap<String, CoreOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {
+        // TODO: Implement this.
+
+        Ok(HashMap::new())
+    }
+
+    pub async fn get_managed_serial_ports(
+        &self,
+    ) -> Result<Vec<AppManagedSerialPort>, AppManagedSerialPortsError> {
+        let managed_serial_ports = self.serial_state().managed_serial_ports().await?;
+        let open_serial_port_options = self.get_all_open_serial_port_options().await?;
+
+        let managed_serial_ports = managed_serial_ports
+            .into_iter()
+            .map(|port| {
+                let last_used_open_options = open_serial_port_options
+                    .get(&port.name)
+                    .cloned()
+                    .unwrap_or_default();
+
+                AppManagedSerialPort {
+                    managed_serial_port: port,
+                    last_used_open_options,
+                }
+            })
+            .collect();
+
+        Ok(managed_serial_ports)
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Packets {
-    packets: Arc<RwLock<Vec<Packet>>>,
-}
-
-impl Packets {
-    pub async fn push(&self, packet: &CorePacket) {
-        let packet = Packet {
-            packet_direction: packet.packet_direction.clone(),
-            timestamp_millis: packet.timestamp_millis,
-        };
-
-        self.packets.write().await.push(packet);
-    }
+#[derive(Debug, thiserror::Error)]
+pub enum AppManagedSerialPortsError {
+    #[error("Failed to get managed ports: {0}")]
+    ManagedSerialPortsError(
+        #[source]
+        #[from]
+        CoreManagedSerialPortsError,
+    ),
+    #[error("Failed to get open serial port options: {0}")]
+    GetOpenSerialPortOptionsError(
+        #[source]
+        #[from]
+        AppGetOpenSerialPortOptionsError,
+    ),
 }
