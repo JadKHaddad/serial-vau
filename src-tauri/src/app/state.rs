@@ -82,14 +82,13 @@ impl AppState {
         &self,
     ) -> Result<Vec<AppManagedSerialPort>, AppManagedSerialPortsError> {
         let managed_serial_ports = self.serial_state().managed_serial_ports().await?;
-        let open_serial_port_options = self.get_all_open_serial_port_options().await?;
+        let mut open_serial_port_options = self.get_all_open_serial_port_options().await?;
 
         let managed_serial_ports = managed_serial_ports
             .into_iter()
             .map(|port| {
                 let last_used_open_options = open_serial_port_options
-                    .get(&port.name)
-                    .cloned()
+                    .remove(&port.name)
                     .unwrap_or_default();
 
                 AppManagedSerialPort {
