@@ -1,11 +1,10 @@
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    app::state::AppManagedSerialPortsError,
-    core::state::{
-        error::{CoreIncomingPacketError, CoreOpenSerialPortError, CorePacketError},
-        open_serial_port::CoreOpenSerialPortOptions,
+    app::{
+        model::managed_serial_port::AppOpenSerialPortOptions, state::AppManagedSerialPortsError,
     },
+    core::state::error::{CoreIncomingPacketError, CoreOpenSerialPortError, CorePacketError},
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
@@ -21,12 +20,12 @@ pub async fn open_serial_port_intern(
 ) -> Result<Vec<ManagedSerialPort>, OpenSerialPortError> {
     tracing::info!(?options, "Opening serial port");
 
-    let core_options: CoreOpenSerialPortOptions = options.into();
+    let app_options: AppOpenSerialPortOptions = options.into();
 
     // save the options
     if let Err(err) = state
         .app_state()
-        .add_or_update_open_serial_port_options(&name, &core_options)
+        .add_or_update_open_serial_port_options(&name, &app_options)
         .await
     {
         tracing::error!(%err, name=%name, "Error adding or updating open serial port options");
@@ -36,7 +35,7 @@ pub async fn open_serial_port_intern(
 
     let mut rx = state
         .serial_state()
-        .open_serial_port(&name, core_options)
+        .open_serial_port(&name, app_options.core_options)
         .await?;
 
     let app = app.clone();

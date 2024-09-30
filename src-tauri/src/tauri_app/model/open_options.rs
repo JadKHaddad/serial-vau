@@ -160,16 +160,19 @@ mod core_impl {
         }
     }
 
-    impl From<OpenSerialPortOptions> for CoreOpenSerialPortOptions {
+    impl From<OpenSerialPortOptions> for AppOpenSerialPortOptions {
         fn from(value: OpenSerialPortOptions) -> Self {
             Self {
-                initial_read_state: value.initial_read_state.into(),
-                baud_rate: value.baud_rate,
-                data_bits: value.data_bits.into(),
-                flow_control: value.flow_control.into(),
-                parity: value.parity.into(),
-                stop_bits: value.stop_bits.into(),
-                timeout: value.timeout.into(),
+                tag: value.tag,
+                core_options: CoreOpenSerialPortOptions {
+                    initial_read_state: value.initial_read_state.into(),
+                    baud_rate: value.baud_rate,
+                    data_bits: value.data_bits.into(),
+                    flow_control: value.flow_control.into(),
+                    parity: value.parity.into(),
+                    stop_bits: value.stop_bits.into(),
+                    timeout: value.timeout.into(),
+                },
             }
         }
     }

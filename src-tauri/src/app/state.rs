@@ -50,7 +50,7 @@ impl AppState {
     pub async fn add_or_update_open_serial_port_options(
         &self,
         port_name: &str,
-        options: &CoreOpenSerialPortOptions,
+        options: &AppOpenSerialPortOptions,
     ) -> Result<(), AppAddOrUpdateOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
