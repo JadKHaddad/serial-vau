@@ -30,6 +30,11 @@ tokio-util = { version = "0.7.11", features = ["codec", "rt"] }
 tokio-serial = "5.4.4"
 futures = "0.3.0"
 chrono = "0.4.38"
+sea-orm = { version = "1.0.1", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+] }
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.14.0"
