@@ -5,9 +5,7 @@ use error::{
 };
 
 use crate::core::state::{
-    error::CoreManagedSerialPortsError,
-    open_serial_port::{CoreOpenSerialPortOptions, CorePacket},
-    CoreSerialState,
+    error::CoreManagedSerialPortsError, open_serial_port::CorePacket, CoreSerialState,
 };
 
 use super::model::managed_serial_port::{AppManagedSerialPort, AppOpenSerialPortOptions};
