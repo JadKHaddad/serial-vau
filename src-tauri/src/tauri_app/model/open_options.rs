@@ -44,6 +44,7 @@ pub struct Duration {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenSerialPortOptions {
+    pub tag: String,
     pub initial_read_state: ReadState,
     pub baud_rate: u32,
     pub data_bits: DataBits,
@@ -56,9 +57,11 @@ pub struct OpenSerialPortOptions {
 mod core_impl {
     use super::*;
 
-    use crate::core::state::open_serial_port::{
-        CoreDataBits, CoreFlowControl, CoreParity, CoreStopBits,
-        CoreOpenSerialPortOptions as CoreOpenSerialPortOptions,
+    use crate::{
+        app::model::managed_serial_port::AppOpenSerialPortOptions,
+        core::state::open_serial_port::{
+            CoreDataBits, CoreFlowControl, CoreOpenSerialPortOptions, CoreParity, CoreStopBits,
+        },
     };
     use core::time::Duration as CoreDuration;
 
@@ -171,16 +174,17 @@ mod core_impl {
         }
     }
 
-    impl From<CoreOpenSerialPortOptions> for OpenSerialPortOptions {
-        fn from(value: CoreOpenSerialPortOptions) -> Self {
+    impl From<AppOpenSerialPortOptions> for OpenSerialPortOptions {
+        fn from(value: AppOpenSerialPortOptions) -> Self {
             Self {
-                initial_read_state: value.initial_read_state.into(),
-                baud_rate: value.baud_rate,
-                data_bits: value.data_bits.into(),
-                flow_control: value.flow_control.into(),
-                parity: value.parity.into(),
-                stop_bits: value.stop_bits.into(),
-                timeout: value.timeout.into(),
+                tag: value.tag,
+                initial_read_state: value.core_options.initial_read_state.into(),
+                baud_rate: value.core_options.baud_rate,
+                data_bits: value.core_options.data_bits.into(),
+                flow_control: value.core_options.flow_control.into(),
+                parity: value.core_options.parity.into(),
+                stop_bits: value.core_options.stop_bits.into(),
+                timeout: value.core_options.timeout.into(),
             }
         }
     }

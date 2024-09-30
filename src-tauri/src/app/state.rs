@@ -10,7 +10,7 @@ use crate::core::state::{
     CoreSerialState,
 };
 
-use super::model::managed_serial_port::AppManagedSerialPort;
+use super::model::managed_serial_port::{AppManagedSerialPort, AppOpenSerialPortOptions};
 
 pub mod error;
 
@@ -61,10 +61,10 @@ impl AppState {
     pub async fn get_open_serial_port_options(
         &self,
         port_name: &str,
-    ) -> Result<CoreOpenSerialPortOptions, AppGetOpenSerialPortOptionsError> {
+    ) -> Result<AppOpenSerialPortOptions, AppGetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
-        Ok(CoreOpenSerialPortOptions::default())
+        Ok(AppOpenSerialPortOptions::default())
     }
 
     /// Get all the open options for all the open serial ports.
@@ -72,7 +72,7 @@ impl AppState {
     /// Returns a map of the port name to the open options.
     pub async fn get_all_open_serial_port_options(
         &self,
-    ) -> Result<HashMap<String, CoreOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {
+    ) -> Result<HashMap<String, AppOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {
         // TODO: Implement this.
 
         Ok(HashMap::new())

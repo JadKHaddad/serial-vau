@@ -11,7 +11,6 @@
 - tauri-cli
 - Node / npm
 
-
 ## 💿 Commands
 
 | Package Manager                                               | Command        |
@@ -20,19 +19,30 @@
 | [ui dev](https://docs.npmjs.com/cli/v7/commands/npm-install)  | `npm run dev`  |
 | [serial vau](https://www.rust-lang.org/tools/install)         | `cargo run`    |
 
-
 ## ✨ Features
 
-* 🛠️ **Subscription**: Activate Subscription to Subscribe to multiple devices.
+- 🛠️ **Subscription**: Activate Subscription to Subscribe to multiple devices.
 
-* *More Features soon...*
+- *More Features soon...*
 
-#### Screenshots
+### Screenshots
 
 ![alt text](screenshots/image.png)
 
-
 ## 💪 Support Serial Vau Development
 
-* *Do you want to Contribut to Serial Vau?* **Just do it** ⚡
+- *Do you want to Contribut to Serial Vau?* **Just do it** ⚡
 
+## Migrate
+
+```bash
+sea-orm-cli migrate up
+
+sea-orm-cli migrate up
+```
+
+## Create Entities
+
+```bash
+sea-orm-cli generate entity -o src-tauri/src/app/database/entity
+```
