@@ -121,6 +121,7 @@ impl Default for CorePacketDirection {
 /// Packet emitted by [`CoreSerialState::open_serial_port`](crate::core::state::CoreSerialState::open_serial_port) through the channel.
 #[derive(Debug, Clone, Default)]
 pub struct CorePacket {
+    // TODO: add tag
     pub packet_direction: CorePacketDirection,
     /// The name of the corresponding serial port.
     pub port_name: String,
