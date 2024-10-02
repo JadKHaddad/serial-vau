@@ -92,9 +92,10 @@ impl From<OpenOptionsModel> for AppOpenSerialPortOptions {
     }
 }
 
-impl From<AppOpenSerialPortOptions> for OpenOptionsActiveModel {
-    fn from(options: AppOpenSerialPortOptions) -> Self {
+impl From<(i32, AppOpenSerialPortOptions)> for OpenOptionsActiveModel {
+    fn from((serial_port_id, options): (i32, AppOpenSerialPortOptions)) -> Self {
         Self {
+            serial_port_id: ActiveValue::Set(serial_port_id),
             tag: ActiveValue::Set(options.tag),
             init_read_state: ActiveValue::Set(match options.core_options.initial_read_state {
                 CoreReadState::Read => 0,
@@ -171,8 +172,8 @@ impl From<(String, PacketModel)> for CorePacket {
     }
 }
 
-impl From<(String, CorePacket)> for PacketActiveModel {
-    fn from((tag, packet): (String, CorePacket)) -> Self {
+impl From<(i32, String, CorePacket)> for PacketActiveModel {
+    fn from((serial_port_id, tag, packet): (i32, String, CorePacket)) -> Self {
         let (incoming, outgioing, outgoing_direct, outgoing_broadcast, outgoing_subscription, data) =
             match packet.packet_direction {
                 CorePacketDirection::Incoming(incoming_packet) => {
@@ -209,6 +210,7 @@ impl From<(String, CorePacket)> for PacketActiveModel {
             };
 
         Self {
+            serial_port_id: ActiveValue::Set(serial_port_id),
             tag: ActiveValue::Set(tag),
             incoming: ActiveValue::Set(incoming),
             outgioing: ActiveValue::Set(outgioing),
