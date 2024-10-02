@@ -122,7 +122,12 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Packet::SerialPortId).unsigned().not_null())
                     .col(ColumnDef::new(Packet::Tag).char_len(32).not_null())
-                    .col(ColumnDef::new(Packet::Timestamp).timestamp().not_null())
+                    .col(
+                        ColumnDef::new(Packet::Timestamp)
+                            .timestamp()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
+                    )
                     .col(ColumnDef::new(Packet::Incoming).boolean().not_null())
                     .col(ColumnDef::new(Packet::Outgioing).boolean().not_null())
                     .col(ColumnDef::new(Packet::OutgoingDirect).boolean())

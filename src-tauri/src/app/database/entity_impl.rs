@@ -171,8 +171,8 @@ impl From<(String, PacketModel)> for CorePacket {
     }
 }
 
-impl From<CorePacket> for PacketActiveModel {
-    fn from(packet: CorePacket) -> Self {
+impl From<(String, CorePacket)> for PacketActiveModel {
+    fn from((tag, packet): (String, CorePacket)) -> Self {
         let (incoming, outgioing, outgoing_direct, outgoing_broadcast, outgoing_subscription, data) =
             match packet.packet_direction {
                 CorePacketDirection::Incoming(incoming_packet) => {
@@ -209,8 +209,7 @@ impl From<CorePacket> for PacketActiveModel {
             };
 
         Self {
-            tag: todo!("Core Packet Tag"),
-            timestamp: todo!("Make timestamp in core DatetimeUtc and convert it in tauri_app"),
+            tag: ActiveValue::Set(tag),
             incoming: ActiveValue::Set(incoming),
             outgioing: ActiveValue::Set(outgioing),
             outgoing_direct: ActiveValue::Set(outgoing_direct),

@@ -38,7 +38,7 @@
 ```bash
 sea-orm-cli migrate up
 
-sea-orm-cli migrate up
+sea-orm-cli migrate down
 ```
 
 ## Create Entities
