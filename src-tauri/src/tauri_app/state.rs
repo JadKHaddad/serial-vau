@@ -1,5 +1,5 @@
 use crate::{
-    app::state::{AppManagedSerialPortsError, AppState},
+    app::state::{error::AppManagedSerialPortsError, AppState},
     core::state::CoreSerialState as SerialState,
 };
 

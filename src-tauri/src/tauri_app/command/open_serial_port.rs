@@ -3,7 +3,7 @@ use tauri::{AppHandle, Manager};
 use crate::{
     app::{
         model::managed_serial_port::AppOpenSerialPortOptions,
-        state::{AppManagedSerialPortsError, AppOpenSerialPortError, AppPacketError},
+        state::error::{AppManagedSerialPortsError, AppOpenSerialPortError, AppPacketError},
     },
     core::state::error::{CoreIncomingPacketError, CorePacketError},
     tauri_app::{
@@ -55,6 +55,8 @@ pub async fn open_serial_port_intern(
                         AppPacketError::CorePacketError(CorePacketError::Incoming(
                             CoreIncomingPacketError::Codec(..),
                         )) => {}
+                        // Save packet error will not break the read loop in `State.open_serial_port`.
+                        AppPacketError::SavePacketError(..) => {}
                         _ => {
                             let _ = emit_managed_serial_ports(&app, &tauri_app_state).await;
                         }

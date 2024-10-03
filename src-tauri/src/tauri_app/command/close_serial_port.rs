@@ -1,5 +1,5 @@
 use crate::{
-    app::state::AppManagedSerialPortsError,
+    app::state::error::AppManagedSerialPortsError,
     tauri_app::{model::managed_serial_port::ManagedSerialPort, state::TauriAppState},
 };
 

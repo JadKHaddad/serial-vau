@@ -1,25 +1,19 @@
 use std::collections::HashMap;
 
-use error::{AppAddPacketError, AppGetOpenSerialPortOptionsError};
+use error::{
+    AppAddPacketError, AppGetOpenSerialPortOptionsError, AppManagedSerialPortsError,
+    AppOpenSerialPortError, AppPacketError,
+};
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 
-use crate::core::state::{
-    error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError},
-    open_serial_port::CorePacket,
-    CoreSerialState,
-};
+use crate::core::state::{open_serial_port::CorePacket, CoreSerialState};
 
 use super::{
-    database::{
-        Database, InsertPacketError, InsertSerialPortError, NewDatabaseError,
-        UpdateOrInsertOpenSerialPortOptionsError,
-    },
+    database::{Database, NewDatabaseError},
     model::managed_serial_port::{AppManagedSerialPort, AppOpenSerialPortOptions},
 };
 
 pub mod error;
-
-// TODO after implementing the database and adding the models make the models From/Into CoreModels like src-tauri/src/tauri_app/model/managed_serial_port.rs
 
 #[derive(Debug, thiserror::Error)]
 pub enum NewAppStateError {
@@ -110,6 +104,7 @@ impl AppState {
         // get the serial port id
         let port_id = self
             .db
+            // TODO: maybe some chaching for the serial port id
             .get_serial_port_id_or_insert_returning_id(name)
             .await?;
 
@@ -134,21 +129,24 @@ impl AppState {
 
             while let Some(packet) = core_rx.recv().await {
                 match packet {
-                    Ok(packet) => match db
-                        .insert_packet_returning_id(port_id, tag.clone(), packet.clone())
-                        .await
-                    {
-                        Ok(id) => {
-                            tracing::debug!(id, from=%name, "Packet saved");
+                    Ok(packet) => {
+                        // TODO: maybe some buffering
+                        match db
+                            .insert_packet_returning_id(port_id, tag.clone(), packet.clone())
+                            .await
+                        {
+                            Ok(id) => {
+                                tracing::debug!(id, from=%name, "Packet saved");
+                            }
+                            Err(err) => {
+                                tracing::error!(%err, from=%name, "Error saving packet");
 
-                            let _ = tx.send(Ok(packet));
+                                let _ = tx.send(Err(AppPacketError::SavePacketError(err)));
+                            }
                         }
-                        Err(err) => {
-                            tracing::error!(%err, from=%name, "Error saving packet");
 
-                            let _ = tx.send(Err(AppPacketError::SavePacketError(err)));
-                        }
-                    },
+                        let _ = tx.send(Ok(packet));
+                    }
                     Err(err) => {
                         let _ = tx.send(Err(AppPacketError::CorePacketError(err)));
                     }
@@ -160,58 +158,4 @@ impl AppState {
 
         Ok(rx)
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum AppManagedSerialPortsError {
-    #[error("Failed to get managed ports: {0}")]
-    ManagedSerialPortsError(
-        #[source]
-        #[from]
-        CoreManagedSerialPortsError,
-    ),
-    #[error("Failed to get open serial port options: {0}")]
-    GetOpenSerialPortOptionsError(
-        #[source]
-        #[from]
-        AppGetOpenSerialPortOptionsError,
-    ),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum AppOpenSerialPortError {
-    #[error("Failed to save serial port: {0}")]
-    SertialPortId(
-        #[source]
-        #[from]
-        InsertSerialPortError,
-    ),
-    #[error("Failed to save open serial port options: {0}")]
-    SaveOpenOptions(
-        #[source]
-        #[from]
-        UpdateOrInsertOpenSerialPortOptionsError,
-    ),
-    #[error("Failed to open serial port: {0}")]
-    CoreOpenSerialPortError(
-        #[source]
-        #[from]
-        CoreOpenSerialPortError,
-    ),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum AppPacketError {
-    #[error("Core packet error: {0}")]
-    CorePacketError(
-        #[source]
-        #[from]
-        CorePacketError,
-    ),
-    #[error("Failed to save packet: {0}")]
-    SavePacketError(
-        #[source]
-        #[from]
-        InsertPacketError,
-    ),
 }
