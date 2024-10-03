@@ -33,6 +33,7 @@ impl AppState {
         let serial_state = CoreSerialState::default();
 
         // TODO: run the migrations!
+        // We might need to create the sqlite database file first if (sqlite connection) and it doesn't exist.
         let db = Database::new(connection_string).await?;
 
         Ok(Self { serial_state, db })
