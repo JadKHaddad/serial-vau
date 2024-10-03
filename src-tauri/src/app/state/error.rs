@@ -1,5 +1,5 @@
 use crate::{
-    app::database::{
+    app::database::error::{
         InsertPacketError, InsertSerialPortError, UpdateOrInsertOpenSerialPortOptionsError,
     },
     core::state::error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError},
