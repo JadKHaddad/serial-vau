@@ -120,7 +120,9 @@ fn do_error() -> Result<(), AppError> {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let app_state = AppState::default();
+    // TODO: Use in setup!
+    let app_state = tauri::async_runtime::block_on(AppState::new("sqlite:../sqlite.db"))?;
+
     let tauri_app_state = TauriAppState::new(app_state);
     
     let tauri_app_state_wachter = tauri_app_state.clone();

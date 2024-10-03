@@ -9,7 +9,7 @@ pub struct AppManagedSerialPort {
     pub last_used_open_options: AppOpenSerialPortOptions,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct AppOpenSerialPortOptions {
     pub tag: String,
     pub core_options: CoreOpenSerialPortOptions,

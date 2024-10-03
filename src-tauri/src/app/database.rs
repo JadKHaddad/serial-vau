@@ -18,7 +18,7 @@ pub enum NewDatabaseError {
     Connect(#[from] sea_orm::error::DbErr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Database {
     conn: DatabaseConnection,
 }
@@ -39,6 +39,8 @@ impl Database {
         &self,
         name: &str,
     ) -> Result<i32, InsertSerialPortError> {
+        tracing::trace!(name = %name, "Getting serial port id or inserting");
+
         let serial_port = entity::serial_port::Entity::find()
             .filter(entity::serial_port::Column::Name.eq(name))
             .into_partial_model::<SerialPortId>()
@@ -55,6 +57,8 @@ impl Database {
         &self,
         name: String,
     ) -> Result<i32, InsertSerialPortError> {
+        tracing::trace!(name = %name, "Inserting serial port");
+
         let serial_port = entity::serial_port::ActiveModel {
             name: ActiveValue::Set(name),
             ..Default::default()
@@ -66,11 +70,13 @@ impl Database {
     }
 
     /// See [`Self::get_serial_port_id_or_insert_returning_id`].
-    pub async fn insert_open_serial_port_options(
+    pub async fn insert_open_serial_port_options_returning_id(
         &self,
         port_id: i32,
         options: AppOpenSerialPortOptions,
     ) -> Result<i32, InsertOpenSerialPortOptionsError> {
+        tracing::trace!(port_id, "Inserting open serial port options");
+
         let options = entity::open_options::ActiveModel::from((port_id, options));
 
         let id = options.insert(&self.conn).await?.id;
@@ -78,13 +84,51 @@ impl Database {
         Ok(id)
     }
 
+    pub async fn update_or_insert_serial_port_options_returning_id(
+        &self,
+        port_id: i32,
+        options: AppOpenSerialPortOptions,
+    ) -> Result<i32, UpdateOrInsertOpenSerialPortOptionsError> {
+        tracing::trace!(port_id, "Updating or inserting open serial port options");
+
+        let options_opt = entity::open_options::Entity::find_by_id(port_id)
+            .one(&self.conn)
+            .await
+            .map_err(UpdateOrInsertOpenSerialPortOptionsError::Get)?;
+
+        match options_opt {
+            Some(existing_options) => {
+                let mut options = entity::open_options::ActiveModel::from((port_id, options));
+                options.id = ActiveValue::set(existing_options.id);
+
+                let id = options
+                    .update(&self.conn)
+                    .await
+                    .map_err(UpdateOrInsertOpenSerialPortOptionsError::Update)?
+                    .id;
+
+                Ok(id)
+            }
+            None => {
+                let id = self
+                    .insert_open_serial_port_options_returning_id(port_id, options)
+                    .await
+                    .map_err(UpdateOrInsertOpenSerialPortOptionsError::Insert)?;
+
+                Ok(id)
+            }
+        }
+    }
+
     /// See [`Self::get_serial_port_id_or_insert_returning_id`].
-    pub async fn insert_packet(
+    pub async fn insert_packet_returning_id(
         &self,
         port_id: i32,
         tag: String,
         packet: CorePacket,
     ) -> Result<i32, InsertPacketError> {
+        tracing::trace!(port_id, %tag, "Inserting packet");
+
         let packet = entity::packet::ActiveModel::from((port_id, tag, packet));
 
         let id = packet.insert(&self.conn).await?.id;
@@ -109,6 +153,16 @@ pub enum InsertSerialPortError {
 pub enum InsertOpenSerialPortOptionsError {
     #[error("Failed to insert open serial port options: {0}")]
     Insert(#[from] sea_orm::error::DbErr),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum UpdateOrInsertOpenSerialPortOptionsError {
+    #[error("Failed to get open serial port options: {0}")]
+    Get(sea_orm::error::DbErr),
+    #[error("Failed to update open serial port options: {0}")]
+    Update(sea_orm::error::DbErr),
+    #[error("Failed to insert open serial port options: {0}")]
+    Insert(InsertOpenSerialPortOptionsError),
 }
 
 #[derive(Debug, thiserror::Error)]

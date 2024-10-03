@@ -121,7 +121,7 @@ impl Default for CorePacketDirection {
 /// Packet emitted by [`CoreSerialState::open_serial_port`](crate::core::state::CoreSerialState::open_serial_port) through the channel.
 ///
 /// Represents a packet that should be sent as single packet and not in a collection.
-/// That is why we need the port_name
+/// That is why we need the [`Self::port_name`] to know where to send the packet.
 #[derive(Debug, Clone, Default)]
 pub struct CorePacket {
     pub packet_direction: CorePacketDirection,

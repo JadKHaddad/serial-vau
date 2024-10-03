@@ -2,9 +2,10 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     app::{
-        model::managed_serial_port::AppOpenSerialPortOptions, state::AppManagedSerialPortsError,
+        model::managed_serial_port::AppOpenSerialPortOptions,
+        state::{AppManagedSerialPortsError, AppOpenSerialPortError, AppPacketError},
     },
-    core::state::error::{CoreIncomingPacketError, CoreOpenSerialPortError, CorePacketError},
+    core::state::error::{CoreIncomingPacketError, CorePacketError},
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
@@ -22,39 +23,20 @@ pub async fn open_serial_port_intern(
 
     let app_options: AppOpenSerialPortOptions = options.into();
 
-    // save the options
-    if let Err(err) = state
-        .app_state()
-        .add_or_update_open_serial_port_options(&name, &app_options)
-        .await
-    {
-        tracing::error!(%err, name=%name, "Error adding or updating open serial port options");
-
-        // TODO: Emit non-fatal error
-    }
-
     let mut rx = state
-        .serial_state()
-        .open_serial_port(&name, app_options.core_options)
+        .app_state()
+        .open_serial_port(&name, app_options)
         .await?;
 
     let app = app.clone();
 
     let tauri_app_state = state.clone();
-    let app_state = state.app_state().clone();
     tokio::spawn(async move {
         tracing::debug!(name=%name, "Read events task started");
 
         while let Some(packet) = rx.recv().await {
             match packet {
                 Ok(packet) => {
-                    // Note: May not be needed. see `crate::app::state::State`
-                    if let Err(err) = app_state.add_packet(&packet).await {
-                        tracing::error!(%err, from=%name, "Error adding packet to app state");
-
-                        // TODO: Emit non-fatal error
-                    }
-
                     let event = PacketEvent {
                         packet: packet.into(),
                     };
@@ -70,7 +52,9 @@ pub async fn open_serial_port_intern(
 
                     match err {
                         // Decoding lines error will not break the read loop in `State.open_serial_port`.
-                        CorePacketError::Incoming(CoreIncomingPacketError::Codec(..)) => {}
+                        AppPacketError::CorePacketError(CorePacketError::Incoming(
+                            CoreIncomingPacketError::Codec(..),
+                        )) => {}
                         _ => {
                             let _ = emit_managed_serial_ports(&app, &tauri_app_state).await;
                         }
@@ -93,7 +77,7 @@ pub enum OpenSerialPortError {
     OpenSerialPortError(
         #[source]
         #[from]
-        CoreOpenSerialPortError,
+        AppOpenSerialPortError,
     ),
     #[error("Failed to get managed ports: {0}")]
     ManagedSerialPortsError(

@@ -5,7 +5,7 @@ use crate::{
 
 use super::model::managed_serial_port::ManagedSerialPort;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct TauriAppState {
     app_state: AppState,
 }
