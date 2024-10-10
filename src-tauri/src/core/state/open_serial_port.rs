@@ -43,7 +43,7 @@ pub enum CoreStopBits {
 }
 
 /// Describes how a given serial port should be open.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct CoreOpenSerialPortOptions {
     /// Defines the [`CoreReadState`] of a serial port before it is even open.
     pub initial_read_state: CoreReadState,
@@ -53,6 +53,20 @@ pub struct CoreOpenSerialPortOptions {
     pub parity: CoreParity,
     pub stop_bits: CoreStopBits,
     pub timeout: Duration,
+}
+
+impl Default for CoreOpenSerialPortOptions {
+    fn default() -> Self {
+        Self {
+            initial_read_state: Default::default(),
+            baud_rate: 115200,
+            data_bits: Default::default(),
+            flow_control: Default::default(),
+            parity: Default::default(),
+            stop_bits: Default::default(),
+            timeout: Default::default(),
+        }
+    }
 }
 
 /// Represents a packet that is received from a serial port.
