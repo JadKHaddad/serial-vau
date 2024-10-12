@@ -29,7 +29,9 @@
 
 #### Screenshots
 
-![alt text](screenshots/image.png)
+![Serial Port Page](screenshots/serialPorts.png)
+
+![Monitor Page (old)](screenshots/monitor.png)
 
 
 ## 💪 Support Serial Vau Development
