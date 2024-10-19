@@ -13,7 +13,6 @@ export const invoke = (cmd: string, args?: Record<string, any>) => {
         const portToOpen = mockManagedSerialPorts.findIndex(
           (port) => port.name === args?.name
         );
-        console.debug("portToOpen", portToOpen);
 
         if (portToOpen !== -1) {
           mockManagedSerialPorts[portToOpen].status = {
