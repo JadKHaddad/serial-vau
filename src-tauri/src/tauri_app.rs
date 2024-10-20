@@ -8,13 +8,14 @@ use command::{
     subscribe::{subscribe_intern, unsubscribe_intern},
     toggle_read_state::toggle_read_state_intern,
 };
+use futures::StreamExt;
 use error::AppError;
 use event::emit_managed_serial_ports::emit_managed_serial_ports;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::app::state::AppState;
+use crate::{app::state::AppState, watcher::{models::WatcherEventType, watcher_service::WatcherService, Watcher}};
 
 mod command;
 mod error;
@@ -129,19 +130,22 @@ pub fn run() -> anyhow::Result<()> {
     tauri::Builder::default()
         .manage(tauri_app_state)
         .setup(|app| {
-            #[cfg(windows)]
-            {
-                use crate::core::serial::watcher::windows::{SerialEventType, Watcher as SerialWatcher};
-                use futures::StreamExt;
-
                 let app_handle = app.app_handle().clone();
                 tauri::async_runtime::spawn(async move {
                     let pool = tokio_util::task::LocalPoolHandle::new(1);
 
                     let _ = pool
                         .spawn_pinned(|| async move {
-                            let watcher = SerialWatcher::new()?;
-                            let mut stream = std::pin::pin!(watcher.serial_port_events_stream()?);
+                            #[cfg(windows)]
+                            let watcher: Watcher = {
+                                use crate::watcher::watcher_impl::wmi_watcher::WMIWatcher;
+                                
+                                Watcher::WmiWatcher(WMIWatcher::new()?)
+                            };
+                            #[cfg(not(windows))]
+                            let watcher: Watcher = Watcher::DummyWatcher(DummyWatcher::default());
+
+                            let mut stream = std::pin::pin!(watcher.events_stream()?);
 
                             tracing::debug!("Starting serial events watcher");
 
@@ -155,10 +159,10 @@ pub fn run() -> anyhow::Result<()> {
                                         break;
                                     }
                                     Ok(event) => match event.event_type {
-                                        SerialEventType::Creation => {
+                                        WatcherEventType::Creation => {
                                             tracing::trace!(name=%event.serial_port.name(), "Serial creation event detected");
                                         }
-                                        SerialEventType::Deletion => {
+                                        WatcherEventType::Deletion => {
                                             tracing::trace!(name=%event.serial_port.name(), "Serial deletion event detected");
                                         }
                                     },
@@ -173,7 +177,7 @@ pub fn run() -> anyhow::Result<()> {
                         })
                         .await;
                 });
-            }
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

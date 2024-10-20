@@ -1,7 +1,6 @@
 use tokio_serial::{Error as TokioSerialError, SerialPortInfo};
 
 pub mod managed_serial_port;
-pub mod watcher;
 
 #[derive(Debug, Clone)]
 pub struct CoreSerialPort {

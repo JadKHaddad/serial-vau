@@ -4,8 +4,22 @@ use crate::watcher::{
     watcher_service::WatcherService,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DummyWatcher;
+
+impl DummyWatcher {
+    pub fn new() -> Self {
+        tracing::info!("Creating Dummy watcher");
+
+        Self
+    }
+}
+
+impl Default for DummyWatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl WatcherService for DummyWatcher {
     fn events_stream(

@@ -36,6 +36,8 @@
 ## Migrate
 
 ```bash
+DATABASE_URL=sqlite:sqlite.db
+
 sea-orm-cli migrate up
 
 sea-orm-cli migrate down
