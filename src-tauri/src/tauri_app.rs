@@ -139,13 +139,10 @@ pub fn run() -> anyhow::Result<()> {
                     let _ = pool
                         .spawn_pinned(|| async move {
                             #[cfg(windows)]
-                            let watcher: Watcher = {
-                                use crate::watcher::watcher_impl::wmi_watcher::WMIWatcher;
-                                
-                                WMIWatcher::new()?.into()
-                            };
+                            let watcher: Watcher = crate::watcher::watcher_impl::wmi_watcher::WMIWatcher::new()?.into();
+                            
                             #[cfg(not(windows))]
-                            let watcher: Watcher = DummyWatcher::default().into();
+                            let watcher: Watcher = crate::watcher::watcher_impl::dummy_watcher::DummyWatcher::default().into();
 
                             let mut stream = std::pin::pin!(watcher.events_stream()?);
 
