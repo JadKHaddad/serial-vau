@@ -23,15 +23,15 @@ impl WatcherService for Watcher {
         WatcherPortEventStreamError,
     > {
         #[auto_enums::enum_derive(futures03::Stream)]
-        enum EventStreamDispatch<A, B> {
+        enum Enum<A, B> {
             A(A),
             B(B),
         }
 
         match self {
             #[cfg(windows)]
-            Self::WmiWatcher(watcher) => Ok(EventStreamDispatch::A(watcher.events_stream()?)),
-            Self::DummyWatcher(watcher) => Ok(EventStreamDispatch::B(watcher.events_stream()?)),
+            Self::WmiWatcher(watcher) => Ok(Enum::A(watcher.events_stream()?)),
+            Self::DummyWatcher(watcher) => Ok(Enum::B(watcher.events_stream()?)),
         }
     }
 }

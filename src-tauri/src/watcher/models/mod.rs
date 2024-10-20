@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub struct WatcherPort {
-    name: String,
+    pub name: String,
 }
 
 impl WatcherPort {
