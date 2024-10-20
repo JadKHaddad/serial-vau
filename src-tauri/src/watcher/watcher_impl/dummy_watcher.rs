@@ -5,13 +5,15 @@ use crate::watcher::{
 };
 
 #[derive(Debug)]
-pub struct DummyWatcher;
+pub struct DummyWatcher {
+    _private: (),
+}
 
 impl DummyWatcher {
     pub fn new() -> Self {
-        tracing::info!("Creating Dummy watcher");
+        tracing::info!("Creating Dummy Watcher");
 
-        Self
+        Self { _private: () }
     }
 }
 

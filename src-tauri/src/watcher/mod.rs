@@ -1,3 +1,4 @@
+use derive_more::From;
 use error::{WatcherPortEventError, WatcherPortEventStreamError};
 use futures::Stream;
 use models::WatcherPortEvent;
@@ -8,7 +9,7 @@ pub mod models;
 pub mod watcher_impl;
 pub mod watcher_service;
 
-#[derive(Debug)]
+#[derive(Debug, From)]
 pub enum Watcher {
     #[cfg(windows)]
     WmiWatcher(watcher_impl::wmi_watcher::WMIWatcher),

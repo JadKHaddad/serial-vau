@@ -3711,6 +3711,7 @@ dependencies = [
  "anyhow",
  "auto_enums",
  "chrono",
+ "derive_more",
  "enum_dispatch",
  "futures",
  "sea-orm",

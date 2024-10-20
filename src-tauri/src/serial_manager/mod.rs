@@ -1,3 +1,4 @@
+use derive_more::From;
 use error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError};
 use models::{SerialManagerOpenSerialPortOptions, SerialManagerPort};
 use serial_manager_impl::{
@@ -11,7 +12,7 @@ pub mod models;
 pub mod serial_manager_impl;
 pub mod serial_manager_service;
 
-#[derive(Debug)]
+#[derive(Debug, From)]
 pub enum SerialManager {
     TokioSerialManager(TokioSerialManager),
     DummySerialManager(DummySerialManager),

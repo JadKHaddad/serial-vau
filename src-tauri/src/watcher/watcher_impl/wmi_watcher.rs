@@ -86,7 +86,7 @@ pub struct WMIWatcher {
 
 impl WMIWatcher {
     pub fn new() -> Result<WMIWatcher, WMIWatcherNewError> {
-        tracing::info!("Creating WMI watcher");
+        tracing::info!("Creating WMI Watcher");
 
         let com_con = COMLibrary::new().map_err(WMIWatcherNewError::Lib)?;
         let wmi_con = WMIConnection::new(com_con).map_err(WMIWatcherNewError::Con)?;

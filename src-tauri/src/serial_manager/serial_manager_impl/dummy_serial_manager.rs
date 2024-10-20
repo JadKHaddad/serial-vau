@@ -7,7 +7,23 @@ use crate::serial_manager::{
 };
 
 #[derive(Debug)]
-pub struct DummySerialManager;
+pub struct DummySerialManager {
+    _private: (),
+}
+
+impl DummySerialManager {
+    pub fn new() -> Self {
+        tracing::info!("Creating Dummy Serial Manager");
+
+        Self { _private: () }
+    }
+}
+
+impl Default for DummySerialManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SerialManagerService for DummySerialManager {
     fn available_ports(&self) -> Result<Vec<SerialManagerPort>, SerialManagerAvailablePortsError> {

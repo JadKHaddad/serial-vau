@@ -38,6 +38,7 @@ sea-orm = { version = "1.0.1", features = [
     "runtime-tokio-rustls",
     "macros",
 ] }
+derive_more = { version = "0.99.18", features = ["from"] }
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.14.0"

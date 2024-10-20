@@ -140,10 +140,10 @@ pub fn run() -> anyhow::Result<()> {
                             let watcher: Watcher = {
                                 use crate::watcher::watcher_impl::wmi_watcher::WMIWatcher;
                                 
-                                Watcher::WmiWatcher(WMIWatcher::new()?)
+                                WMIWatcher::new()?.into()
                             };
                             #[cfg(not(windows))]
-                            let watcher: Watcher = Watcher::DummyWatcher(DummyWatcher::default());
+                            let watcher: Watcher = DummyWatcher::default().into();
 
                             let mut stream = std::pin::pin!(watcher.events_stream()?);
 

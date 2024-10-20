@@ -8,11 +8,21 @@ use crate::serial_manager::{
 };
 
 #[derive(Debug)]
-pub struct TokioSerialManager;
+pub struct TokioSerialManager {
+    _private: (),
+}
 
-impl From<SerialPortInfo> for SerialManagerPort {
-    fn from(value: SerialPortInfo) -> Self {
-        Self::new(value.port_name)
+impl TokioSerialManager {
+    pub fn new() -> Self {
+        tracing::info!("Creating Tokio Serial Manager");
+
+        Self { _private: () }
+    }
+}
+
+impl Default for TokioSerialManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -40,6 +50,12 @@ impl SerialManagerService for TokioSerialManager {
             .map_err(|err| SerialManagerOpenPortError::Open(err.into()))?;
 
         Ok(port)
+    }
+}
+
+impl From<SerialPortInfo> for SerialManagerPort {
+    fn from(value: SerialPortInfo) -> Self {
+        Self::new(value.port_name)
     }
 }
 
