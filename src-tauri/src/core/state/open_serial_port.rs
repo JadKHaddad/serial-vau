@@ -240,51 +240,84 @@ pub enum SendError {
     ),
 }
 
-mod impl_tokio_serial {
-    use super::*;
-
-    use tokio_serial::{
-        DataBits as TokioDataBits, FlowControl as TokioFlowControl, Parity as TokioParity,
-        StopBits as TokioStopBits,
+mod impl_from {
+    use crate::{
+        core::serial::managed_serial_port::CoreReadState,
+        serial_manager::models::{
+            SerialManagerDataBits, SerialManagerFlowControl, SerialManagerOpenSerialPortOptions,
+            SerialManagerParity, SerialManagerStopBits,
+        },
     };
 
-    impl From<CoreDataBits> for TokioDataBits {
-        fn from(data_bits: CoreDataBits) -> Self {
-            match data_bits {
-                CoreDataBits::Five => TokioDataBits::Five,
-                CoreDataBits::Six => TokioDataBits::Six,
-                CoreDataBits::Seven => TokioDataBits::Seven,
-                CoreDataBits::Eight => TokioDataBits::Eight,
+    use super::{
+        CoreDataBits, CoreFlowControl, CoreOpenSerialPortOptions, CoreParity, CoreStopBits,
+    };
+
+    impl From<CoreDataBits> for SerialManagerDataBits {
+        fn from(value: CoreDataBits) -> Self {
+            match value {
+                CoreDataBits::Five => Self::Five,
+                CoreDataBits::Six => Self::Six,
+                CoreDataBits::Seven => Self::Seven,
+                CoreDataBits::Eight => Self::Eight,
             }
         }
     }
 
-    impl From<CoreFlowControl> for TokioFlowControl {
-        fn from(flow_control: CoreFlowControl) -> Self {
-            match flow_control {
-                CoreFlowControl::None => TokioFlowControl::None,
-                CoreFlowControl::Software => TokioFlowControl::Software,
-                CoreFlowControl::Hardware => TokioFlowControl::Hardware,
+    impl From<CoreFlowControl> for SerialManagerFlowControl {
+        fn from(value: CoreFlowControl) -> Self {
+            match value {
+                CoreFlowControl::None => Self::None,
+                CoreFlowControl::Software => Self::Software,
+                CoreFlowControl::Hardware => Self::Hardware,
             }
         }
     }
 
-    impl From<CoreParity> for TokioParity {
-        fn from(parity: CoreParity) -> Self {
-            match parity {
-                CoreParity::None => TokioParity::None,
-                CoreParity::Odd => TokioParity::Odd,
-                CoreParity::Even => TokioParity::Even,
+    impl From<CoreParity> for SerialManagerParity {
+        fn from(value: CoreParity) -> Self {
+            match value {
+                CoreParity::None => Self::None,
+                CoreParity::Odd => Self::Odd,
+                CoreParity::Even => Self::Even,
             }
         }
     }
 
-    impl From<CoreStopBits> for TokioStopBits {
-        fn from(stop_bits: CoreStopBits) -> Self {
-            match stop_bits {
-                CoreStopBits::One => TokioStopBits::One,
-                CoreStopBits::Two => TokioStopBits::Two,
+    impl From<CoreStopBits> for SerialManagerStopBits {
+        fn from(value: CoreStopBits) -> Self {
+            match value {
+                CoreStopBits::One => Self::One,
+                CoreStopBits::Two => Self::Two,
             }
+        }
+    }
+
+    impl CoreOpenSerialPortOptions {
+        pub fn split_into_read_state_and_manager_options(
+            self,
+        ) -> (CoreReadState, SerialManagerOpenSerialPortOptions) {
+            let CoreOpenSerialPortOptions {
+                initial_read_state,
+                baud_rate,
+                data_bits,
+                flow_control,
+                parity,
+                stop_bits,
+                timeout,
+            } = self;
+
+            (
+                initial_read_state,
+                SerialManagerOpenSerialPortOptions {
+                    baud_rate,
+                    data_bits: data_bits.into(),
+                    flow_control: flow_control.into(),
+                    parity: parity.into(),
+                    stop_bits: stop_bits.into(),
+                    timeout,
+                },
+            )
         }
     }
 }

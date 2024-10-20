@@ -9,6 +9,10 @@ impl SerialManagerPort {
     pub fn new(name: String) -> Self {
         Self { name }
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Debug)]

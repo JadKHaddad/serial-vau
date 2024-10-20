@@ -30,11 +30,11 @@ impl SerialManagerService for DummySerialManager {
         Ok(Vec::new())
     }
 
-    fn open_port(
+    fn open_port<'a>(
         &self,
-        _name: &str,
+        _name: impl Into<std::borrow::Cow<'a, str>>,
         _options: SerialManagerOpenSerialPortOptions,
-    ) -> Result<impl AsyncRead + AsyncWrite, SerialManagerOpenPortError> {
+    ) -> Result<impl AsyncRead + AsyncWrite + 'static, SerialManagerOpenPortError> {
         Ok(tokio::io::duplex(1024).0)
     }
 }

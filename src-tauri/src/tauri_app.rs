@@ -15,7 +15,7 @@ use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPort
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::{app::state::AppState, watcher::{models::WatcherEventType, watcher_service::WatcherService, Watcher}};
+use crate::{app::state::AppState, serial_manager::serial_manager_impl::tokio_serial_manager::TokioSerialManager, watcher::{models::WatcherEventType, watcher_service::WatcherService, Watcher}};
 
 mod command;
 mod error;
@@ -121,8 +121,10 @@ fn do_error() -> Result<(), AppError> {
 }
 
 pub fn run() -> anyhow::Result<()> {
+    let serial_manager = TokioSerialManager::new();
+
     // TODO: Use in setup!
-    let app_state = tauri::async_runtime::block_on(AppState::new("sqlite:../sqlite.db"))?;
+    let app_state = tauri::async_runtime::block_on(AppState::new("sqlite:../sqlite.db", serial_manager.into()))?;
 
     let tauri_app_state = TauriAppState::new(app_state);
     

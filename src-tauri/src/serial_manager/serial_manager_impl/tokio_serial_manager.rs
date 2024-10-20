@@ -35,11 +35,11 @@ impl SerialManagerService for TokioSerialManager {
             .collect())
     }
 
-    fn open_port(
+    fn open_port<'a>(
         &self,
-        name: &str,
+        name: impl Into<std::borrow::Cow<'a, str>>,
         options: SerialManagerOpenSerialPortOptions,
-    ) -> Result<impl AsyncRead + AsyncWrite, SerialManagerOpenPortError> {
+    ) -> Result<impl AsyncRead + AsyncWrite + 'static, SerialManagerOpenPortError> {
         let port = tokio_serial::new(name, options.baud_rate)
             .stop_bits(options.stop_bits.into())
             .data_bits(options.data_bits.into())
@@ -59,7 +59,7 @@ impl From<SerialPortInfo> for SerialManagerPort {
     }
 }
 
-const _: () = {
+mod impl_from {
     use crate::serial_manager::models::{
         SerialManagerDataBits, SerialManagerFlowControl, SerialManagerParity, SerialManagerStopBits,
     };
@@ -108,4 +108,4 @@ const _: () = {
             }
         }
     }
-};
+}

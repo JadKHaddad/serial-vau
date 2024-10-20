@@ -6,7 +6,10 @@ use error::{
 };
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 
-use crate::core::state::{open_serial_port::CorePacket, CoreSerialState};
+use crate::{
+    core::state::{open_serial_port::CorePacket, CoreSerialState},
+    serial_manager::SerialManager,
+};
 
 use super::{
     database::{Database, NewDatabaseError},
@@ -29,8 +32,11 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn new(connection_string: &str) -> Result<Self, NewAppStateError> {
-        let serial_state = CoreSerialState::default();
+    pub async fn new(
+        connection_string: &str,
+        serial_manager: SerialManager,
+    ) -> Result<Self, NewAppStateError> {
+        let serial_state = CoreSerialState::new(serial_manager);
 
         // TODO: run the migrations!
         // We might need to create the sqlite database file first if (sqlite connection) and it doesn't exist.
