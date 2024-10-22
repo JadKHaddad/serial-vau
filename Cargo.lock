@@ -3709,6 +3709,7 @@ name = "serial-vau"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "auto_enums",
  "chrono",
  "derive_more",

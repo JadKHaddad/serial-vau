@@ -7,13 +7,13 @@ pub enum CoreReadState {
 }
 
 /// Defines additional information if the port is in [`Status::Open`] state.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CoreOpenStatus {
     pub read_state: CoreReadState,
 }
 
 /// Status of a serial port.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Status {
     Closed,
     Open(CoreOpenStatus),
@@ -32,7 +32,7 @@ impl CoreReadState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CoreManagedSerialPort {
     pub name: String,
     pub status: Status,

@@ -39,6 +39,7 @@ sea-orm = { version = "1.0.1", features = [
     "macros",
 ] }
 derive_more = { version = "0.99.18", features = ["from"] }
+async-stream = "0.3.5"
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.14.0"

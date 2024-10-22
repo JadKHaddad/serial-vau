@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError};
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt, Stream, StreamExt};
 use open_serial_port::{
     CoreIncomingPacket, CoreOpenSerialPort, CoreOpenSerialPortOptions, CoreOutgoingPacket,
     CorePacket, CorePacketDirection, SendError,
@@ -78,15 +78,45 @@ pub struct StateInner {
     /// - Subscriptions are removed manually.
     #[cfg(feature = "subscriptions")]
     subscriptions: Arc<RwLock<Subscriptions>>,
+    managed_serial_ports_broadcast_tx: tokio::sync::broadcast::Sender<Vec<CoreManagedSerialPort>>,
 }
 
 impl StateInner {
     fn new(manager: SerialManager) -> Self {
+        let (tx, _) = tokio::sync::broadcast::channel(16);
+
         Self {
             manager,
             open_serial_ports: RwLock::new(HashMap::new()),
             #[cfg(feature = "subscriptions")]
             subscriptions: Arc::new(RwLock::new(HashMap::new())),
+            managed_serial_ports_broadcast_tx: tx,
+        }
+    }
+
+    pub fn managed_serial_ports_stream(
+        &self,
+    ) -> impl Stream<Item = Vec<CoreManagedSerialPort>> + 'static {
+        let mut rx = self.managed_serial_ports_broadcast_tx.subscribe();
+
+        async_stream::stream! {
+            while let Ok(item) = rx.recv().await {
+                yield item;
+            }
+        }
+    }
+
+    pub async fn broadcast_managed_serial_ports(&self) {
+        match self.managed_serial_ports().await {
+            Ok(managed_serial_ports) => {
+                let _ = self
+                    .managed_serial_ports_broadcast_tx
+                    .send(managed_serial_ports);
+            }
+
+            Err(err) => {
+                tracing::error!(%err, "Failed to get managed serial ports");
+            }
         }
     }
 
@@ -168,10 +198,15 @@ impl StateInner {
         self.add_open_serial_port_to_pending_subscriptions(&open_serial_port)
             .await;
 
-        self.open_serial_ports
+        let result = self
+            .open_serial_ports
             .write()
             .await
-            .insert(open_serial_port.name().to_string(), open_serial_port)
+            .insert(open_serial_port.name().to_string(), open_serial_port);
+
+        self.broadcast_managed_serial_ports().await;
+
+        result
     }
 
     /// Sets the [`Option<TxHandle>`] of the given serial port to `Some(TxHandle)` in all subscriptions.
@@ -195,6 +230,8 @@ impl StateInner {
                 .get_mut(open_serial_port.name())
                 .map(|tx_handle| tx_handle.replace(open_serial_port.tx_handle()));
         }
+
+        self.broadcast_managed_serial_ports().await;
     }
 
     /// Cancels the subscription of the given serial port in all subscriptions.
@@ -215,6 +252,8 @@ impl StateInner {
         for (_, tx_handles) in subscriptions.iter_mut() {
             tx_handles.get_mut(name).map(|tx_handle| tx_handle.take());
         }
+
+        self.broadcast_managed_serial_ports().await;
     }
 
     /// Removes the serial port from [`Self::open_serial_ports`] and cancels its subscription.
@@ -234,7 +273,11 @@ impl StateInner {
         #[cfg(feature = "subscriptions")]
         self.remove_open_serial_port_from_all_subscriptions(name)
             .await;
-        self.open_serial_ports.write().await.remove(name)
+        let result = self.open_serial_ports.write().await.remove(name);
+
+        self.broadcast_managed_serial_ports().await;
+
+        result
     }
 
     /// Removes and cancels the serial port from [`Self::open_serial_ports`] and cancels its subscription.
@@ -252,9 +295,14 @@ impl StateInner {
         &self,
         name: &str,
     ) -> Option<CoreOpenSerialPort> {
-        self.remove_open_serial_port(name)
+        let result = self
+            .remove_open_serial_port(name)
             .await
-            .map(CoreOpenSerialPort::cancelled)
+            .map(CoreOpenSerialPort::cancelled);
+
+        self.broadcast_managed_serial_ports().await;
+
+        result
     }
 
     /// - `Ok(Some(bool))` => Port found.
@@ -339,6 +387,8 @@ impl StateInner {
             .entry(from.to_string())
             .or_default()
             .insert(to.to_string(), tx_handle);
+
+        self.broadcast_managed_serial_ports().await;
     }
 
     /// `to` is unsubscribed from `from`.
@@ -358,6 +408,8 @@ impl StateInner {
         subscriptions
             .get_mut(from)
             .and_then(|tx_handles| tx_handles.remove(to));
+
+        self.broadcast_managed_serial_ports().await;
     }
 
     /// - `Some(())` => Ok.
@@ -369,9 +421,13 @@ impl StateInner {
     pub async fn toggle_read_state(&self, name: &str) -> Option<()> {
         tracing::debug!(name=%name, "Toggling read state");
 
-        return self.open_serial_ports.read().await.get(name).map(|port| {
+        let result = self.open_serial_ports.read().await.get(name).map(|port| {
             port.set_read_state(port.read_state().toggle());
         });
+
+        self.broadcast_managed_serial_ports().await;
+
+        result
     }
 }
 
