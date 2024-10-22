@@ -11,8 +11,7 @@ pub mod watcher_service;
 
 #[derive(Debug, From)]
 pub enum Watcher {
-    #[cfg(windows)]
-    WmiWatcher(watcher_impl::wmi_watcher::WMIWatcher),
+    WatcherImpl(watcher_impl::watcher::WatcherImpl),
     DummyWatcher(watcher_impl::dummy_watcher::DummyWatcher),
 }
 
@@ -23,27 +22,14 @@ impl WatcherService for Watcher {
         impl Stream<Item = Result<WatcherPortEvent, WatcherPortEventError>> + '_,
         WatcherPortEventStreamError,
     > {
-        #[cfg(windows)]
         #[auto_enums::enum_derive(futures03::Stream)]
         enum Enum<A, B> {
             A(A),
             B(B),
         }
 
-        #[cfg(windows)]
         match self {
-            Self::WmiWatcher(watcher) => Ok(Enum::A(watcher.events_stream()?)),
-            Self::DummyWatcher(watcher) => Ok(Enum::B(watcher.events_stream()?)),
-        }
-
-        #[cfg(not(windows))]
-        #[auto_enums::enum_derive(futures03::Stream)]
-        enum Enum<B> {
-            B(B),
-        }
-
-        #[cfg(not(windows))]
-        match self {
+            Self::WatcherImpl(watcher) => Ok(Enum::A(watcher.events_stream()?)),
             Self::DummyWatcher(watcher) => Ok(Enum::B(watcher.events_stream()?)),
         }
     }

@@ -90,6 +90,7 @@ impl WMIWatcher {
 
         let com_con = COMLibrary::new().map_err(WMIWatcherNewError::Lib)?;
         let wmi_con = WMIConnection::new(com_con).map_err(WMIWatcherNewError::Con)?;
+
         Ok(Self { wmi_con })
     }
 

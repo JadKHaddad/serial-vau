@@ -15,7 +15,7 @@ use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPort
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::{app::state::AppState, serial_manager::serial_manager_impl::tokio_serial_manager::TokioSerialManager, watcher::{models::WatcherEventType, watcher_service::WatcherService, Watcher}};
+use crate::{app::state::AppState, serial_manager::serial_manager_impl::tokio_serial_manager::TokioSerialManager, watcher::{models::WatcherEventType, watcher_impl::watcher::WatcherImpl, watcher_service::WatcherService, Watcher}};
 
 mod command;
 mod error;
@@ -138,12 +138,8 @@ pub fn run() -> anyhow::Result<()> {
 
                     let _ = pool
                         .spawn_pinned(|| async move {
-                            #[cfg(windows)]
-                            let watcher: Watcher = crate::watcher::watcher_impl::wmi_watcher::WMIWatcher::new()?.into();
-                            
-                            #[cfg(not(windows))]
-                            let watcher: Watcher = crate::watcher::watcher_impl::dummy_watcher::DummyWatcher::default().into();
-
+                            let watcher: Watcher = WatcherImpl::new()?.into();
+                        
                             let mut stream = std::pin::pin!(watcher.events_stream()?);
 
                             tracing::debug!("Starting serial events watcher");
