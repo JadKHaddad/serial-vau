@@ -60,16 +60,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
-
-        // Use the mock only in development mode
-        ...(mode === "development" && {
-          "@tauri-apps/api": fileURLToPath(
-            new URL("./src/api/apiMock.ts", import.meta.url)
-          ),
-          "@tauri-apps/api/event": fileURLToPath(
-            new URL("./src/api/apiMock.ts", import.meta.url)
-          ), // Mocking events as well
-        }),
       },
       extensions: [".js", ".json", ".jsx", ".mjs", ".ts", ".tsx", ".vue"],
     },
