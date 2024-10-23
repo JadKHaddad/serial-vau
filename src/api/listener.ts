@@ -1,4 +1,4 @@
-import { defineStore, storeToRefs } from "pinia";
+import { storeToRefs } from "pinia";
 import { listen } from "@tauri-apps/api/event";
 import { ref } from "vue";
 import { ManagedSerialPortsEvent } from "@/events/managed-serial-ports";
@@ -9,7 +9,7 @@ import { useTheme } from "vuetify";
 
 export type RemoveListenerFunction = () => void;
 
-export const useListenerStore = defineStore("listenerStore", () => {
+export const useListener = () => {
   const app = useAppStore();
   const { managedSerialPorts } = storeToRefs(app);
   const { addPacket, getSerialPorts } = app;
@@ -72,4 +72,4 @@ export const useListenerStore = defineStore("listenerStore", () => {
     setupListeners,
     cleanupListeners,
   };
-});
+};

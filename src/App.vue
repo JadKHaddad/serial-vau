@@ -8,9 +8,9 @@
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted } from "vue";
-import { useListenerStore } from "@/stores/listenerStore";
+import { useListener } from "@/api/listener";
 
-const { setupListeners, cleanupListeners } = useListenerStore();
+const { setupListeners, cleanupListeners } = useListener();
 
 onMounted(async () => {
   setupListeners();
