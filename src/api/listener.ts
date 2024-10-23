@@ -9,8 +9,7 @@ import { useTheme } from "vuetify";
 
 export type RemoveListenerFunction = () => void;
 
-export const useListener = () => {
-  const app = useAppStore();
+export const useListener = (app = useAppStore()) => {
   const { managedSerialPorts } = storeToRefs(app);
   const { addPacket, getSerialPorts } = app;
   const theme = useTheme();
