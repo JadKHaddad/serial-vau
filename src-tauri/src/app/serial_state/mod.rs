@@ -2,12 +2,16 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError};
 use futures::{SinkExt, StreamExt};
-use open_serial_port::{
-    CoreIncomingPacket, CoreOpenSerialPort, CoreOpenSerialPortOptions, CoreOutgoingPacket,
-    CorePacket, CorePacketDirection, SendError,
+use handle::{CoreOpenSerialPort, SendError, TxHandle};
+use model::{
+    CoreManagedSerialPort, CoreOpenStatus, CoreSerialPort, Status,
+    {
+        CoreIncomingPacket, CoreOpenSerialPortOptions, CoreOutgoingPacket, CorePacket,
+        CorePacketDirection,
+    },
 };
 #[cfg(feature = "subscriptions")]
-use open_serial_port::{CorePacketOrigin, CoreSubscriptionPacketOrigin, TxHandle};
+use model::{CorePacketOrigin, CoreSubscriptionPacketOrigin};
 use tokio::sync::{mpsc::UnboundedReceiver as MPSCUnboundedReceiver, RwLock};
 use tokio_util::{
     bytes::BytesMut,
@@ -17,15 +21,12 @@ use tokio_util::{
 
 use crate::serial_manager::{serial_manager_service::SerialManagerService, SerialManager};
 
-use super::codec::lines_codec::LinesCodec;
+use codec::lines_codec::LinesCodec;
 
-use super::serial::{
-    managed_serial_port::{CoreManagedSerialPort, CoreOpenStatus, Status},
-    CoreSerialPort,
-};
-
+pub mod codec;
 pub mod error;
-pub mod open_serial_port;
+pub mod handle;
+pub mod model;
 
 #[derive(Debug, Clone)]
 pub struct CoreSerialState {

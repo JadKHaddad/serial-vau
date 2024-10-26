@@ -15,7 +15,7 @@ use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPort
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::{app::state::AppState, serial_manager::serial_manager_impl::tokio_serial_manager::TokioSerialManager, watcher::{models::WatcherEventType, watcher_impl::watcher::WatcherImpl, watcher_service::WatcherService, Watcher}};
+use crate::{app::state::AppState, serial_manager::serial_manager_impl::tokio_serial_manager::TokioSerialManager, watcher::{model::WatcherEventType, watcher_impl::watcher::WatcherImpl, watcher_service::WatcherService, Watcher}};
 
 mod command;
 mod error;

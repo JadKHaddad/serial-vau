@@ -42,7 +42,7 @@ mod core_impl {
     use super::*;
     use crate::{
         app::model::managed_serial_port::AppManagedSerialPort,
-        core::serial::managed_serial_port::{CoreOpenStatus, CoreReadState, Status as CoreStatus},
+        app::serial_state::model::{CoreOpenStatus, CoreReadState, Status as CoreStatus},
     };
 
     impl From<CoreOpenStatus> for OpenStatus {
@@ -116,9 +116,9 @@ mod core_impl {
 mod tests {
     use super::*;
 
-    use crate::{
-        app::model::managed_serial_port::AppOpenSerialPortOptions,
-        core::state::open_serial_port::CoreOpenSerialPortOptions,
+    use crate::app::{
+        model::managed_serial_port::AppOpenSerialPortOptions,
+        serial_state::model::CoreOpenSerialPortOptions,
     };
 
     #[test]

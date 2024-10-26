@@ -2,7 +2,7 @@ use futures::Stream;
 
 use super::{
     error::{WatcherPortEventError, WatcherPortEventStreamError},
-    models::WatcherPortEvent,
+    model::WatcherPortEvent,
 };
 
 pub trait WatcherService {

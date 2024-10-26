@@ -8,7 +8,7 @@ use wmi::{COMLibrary, FilterValue, WMIConnection, WMIError};
 
 use crate::watcher::{
     error::{WatcherPortEventError, WatcherPortEventStreamError},
-    models::{WatcherEventType, WatcherPort, WatcherPortEvent},
+    model::{WatcherEventType, WatcherPort, WatcherPortEvent},
     watcher_service::WatcherService,
 };
 

@@ -6,14 +6,12 @@ use error::{
 };
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 
-use crate::{
-    core::state::{open_serial_port::CorePacket, CoreSerialState},
-    serial_manager::SerialManager,
-};
+use crate::serial_manager::SerialManager;
 
 use super::{
     database::{Database, NewDatabaseError},
     model::managed_serial_port::{AppManagedSerialPort, AppOpenSerialPortOptions},
+    serial_state::{model::CorePacket, CoreSerialState},
 };
 
 pub mod error;

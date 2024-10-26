@@ -51,8 +51,8 @@ pub struct Packet {
 mod core_impl {
     use super::*;
     #[cfg(feature = "subscriptions")]
-    use crate::core::state::open_serial_port::CoreSubscriptionPacketOrigin;
-    use crate::core::state::open_serial_port::{
+    use crate::app::serial_state::model::CoreSubscriptionPacketOrigin;
+    use crate::app::serial_state::model::{
         CoreIncomingPacket, CoreOutgoingPacket, CorePacket, CorePacketDirection, CorePacketOrigin,
     };
 

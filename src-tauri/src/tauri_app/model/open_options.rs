@@ -59,10 +59,11 @@ mod core_impl {
 
     use crate::{
         app::model::managed_serial_port::AppOpenSerialPortOptions,
-        core::state::open_serial_port::{
+        app::serial_state::model::{
             CoreDataBits, CoreFlowControl, CoreOpenSerialPortOptions, CoreParity, CoreStopBits,
         },
     };
+
     use core::time::Duration as CoreDuration;
 
     impl From<DataBits> for CoreDataBits {

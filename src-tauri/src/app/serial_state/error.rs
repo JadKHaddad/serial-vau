@@ -1,7 +1,7 @@
 use std::io::Error as IOError;
 
 use crate::{
-    core::codec::lines_codec::LinesCodecError,
+    app::serial_state::codec::lines_codec::LinesCodecError,
     serial_manager::error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError},
 };
 

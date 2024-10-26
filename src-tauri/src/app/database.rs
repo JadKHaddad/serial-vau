@@ -8,9 +8,9 @@ use sea_orm::{
     QueryFilter,
 };
 
-use crate::core::state::open_serial_port::CorePacket;
-
-use super::model::managed_serial_port::AppOpenSerialPortOptions;
+use super::{
+    model::managed_serial_port::AppOpenSerialPortOptions, serial_state::model::CorePacket,
+};
 
 pub mod entity;
 mod entity_impl;

@@ -1,6 +1,6 @@
 use crate::watcher::{
     error::{WatcherPortEventError, WatcherPortEventStreamError},
-    models::WatcherPortEvent,
+    model::WatcherPortEvent,
     watcher_service::WatcherService,
 };
 

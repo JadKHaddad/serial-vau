@@ -2,15 +2,12 @@ use std::time::Duration;
 
 use sea_orm::ActiveValue;
 
-use crate::{
-    app::model::managed_serial_port::AppOpenSerialPortOptions,
-    core::{
-        serial::managed_serial_port::CoreReadState,
-        state::open_serial_port::{
-            CoreDataBits, CoreFlowControl, CoreIncomingPacket, CoreOpenSerialPortOptions,
-            CoreOutgoingPacket, CorePacket, CorePacketDirection, CorePacketOrigin, CoreParity,
-            CoreStopBits, CoreSubscriptionPacketOrigin,
-        },
+use crate::app::{
+    model::managed_serial_port::AppOpenSerialPortOptions,
+    serial_state::model::{
+        CoreDataBits, CoreFlowControl, CoreIncomingPacket, CoreOpenSerialPortOptions,
+        CoreOutgoingPacket, CorePacket, CorePacketDirection, CorePacketOrigin, CoreParity,
+        CoreReadState, CoreStopBits, CoreSubscriptionPacketOrigin,
     },
 };
 

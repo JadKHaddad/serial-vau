@@ -1,8 +1,8 @@
-use crate::{
-    app::database::error::{
+use crate::app::{
+    database::error::{
         InsertPacketError, InsertSerialPortError, UpdateOrInsertOpenSerialPortOptionsError,
     },
-    core::state::error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError},
+    serial_state::error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError},
 };
 
 #[derive(Debug, thiserror::Error)]

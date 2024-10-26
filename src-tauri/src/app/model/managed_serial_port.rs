@@ -1,7 +1,4 @@
-use crate::core::{
-    serial::managed_serial_port::CoreManagedSerialPort,
-    state::open_serial_port::CoreOpenSerialPortOptions,
-};
+use crate::app::serial_state::model::{CoreManagedSerialPort, CoreOpenSerialPortOptions};
 
 #[derive(Debug)]
 pub struct AppManagedSerialPort {

@@ -3,9 +3,9 @@ use tauri::{AppHandle, Manager};
 use crate::{
     app::{
         model::managed_serial_port::AppOpenSerialPortOptions,
+        serial_state::error::{CoreIncomingPacketError, CorePacketError},
         state::error::{AppManagedSerialPortsError, AppOpenSerialPortError, AppPacketError},
     },
-    core::state::error::{CoreIncomingPacketError, CorePacketError},
     tauri_app::{
         event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},

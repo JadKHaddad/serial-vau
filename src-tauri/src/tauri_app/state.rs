@@ -1,6 +1,6 @@
 use crate::{
+    app::serial_state::CoreSerialState as SerialState,
     app::state::{error::AppManagedSerialPortsError, AppState},
-    core::state::CoreSerialState as SerialState,
 };
 
 use super::model::managed_serial_port::ManagedSerialPort;
