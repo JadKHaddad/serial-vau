@@ -1,5 +1,5 @@
 import { storeToRefs } from "pinia";
-import { listen } from "@tauri-apps/api/event";
+import { listen, TauriEvent } from "@tauri-apps/api/event";
 import { ref } from "vue";
 import { ManagedSerialPortsEvent } from "@/events/managed-serial-ports";
 import { PacketEvent } from "@/events/packet";
@@ -20,7 +20,7 @@ export const useListener = (app = useAppStore()) => {
 
   const setupListeners = async () => {
     themeChangedEventListener.value = await listen(
-      "tauri://theme-changed",
+      TauriEvent.WINDOW_THEME_CHANGED,
       (event) => {
         const themeName = event.payload as string;
         if (themeName === "dark" || themeName === "light") {

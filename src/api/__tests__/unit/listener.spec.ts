@@ -1,8 +1,7 @@
 import { useListener } from "@/api/listener";
 import { describe, it, vi, expect } from "vitest";
 import { listen } from "@tauri-apps/api/event";
-import { useTheme } from "vuetify";
-import { afterEach, beforeEach } from "node:test";
+import { afterEach, beforeEach } from "vitest";
 
 describe("uesListener composable", () => {
   beforeEach(() => {
@@ -27,6 +26,7 @@ describe("uesListener composable", () => {
 
     vi.mock("@tauri-apps/api/event", () => ({
       listen: vi.fn().mockResolvedValue(vi.fn()),
+      TauriEvent: { WINDOW_THEME_CHANGED: "tauri://theme-changed" },
     }));
   });
 
