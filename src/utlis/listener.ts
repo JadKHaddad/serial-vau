@@ -1,7 +1,7 @@
 import { storeToRefs } from "pinia";
 import { Event, UnlistenFn } from "@tauri-apps/api/event";
 import { ref } from "vue";
-import { ManagedSerialPortsEvent } from "@/events/managed-serial-ports";
+import { ManagedSerialPortsEvent } from "@/events";
 import { PacketData } from "@/models/intern/packet-data";
 import {
   listenPacketEvent,
@@ -10,8 +10,6 @@ import {
 } from "@/api/listener";
 import { useAppStore } from "@/stores/app";
 import { useTheme } from "vuetify";
-
-export type RemoveListenerFunction = () => undefined;
 
 export const useListener = (app = useAppStore()) => {
   const { managedSerialPorts } = storeToRefs(app);

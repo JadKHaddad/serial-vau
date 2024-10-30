@@ -1,5 +1,4 @@
-import { ManagedSerialPortsEvent } from "@/events/managed-serial-ports";
-import { PacketEvent } from "@/events/packet";
+import { PacketEvent, ManagedSerialPortsEvent } from "@/events";
 import { EventCallback, listen, TauriEvent } from "@tauri-apps/api/event";
 
 export enum SerialVauEvents {
