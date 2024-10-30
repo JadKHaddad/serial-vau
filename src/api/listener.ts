@@ -1,74 +1,45 @@
-import { storeToRefs } from "pinia";
-import { listen, TauriEvent } from "@tauri-apps/api/event";
-import { ref } from "vue";
-import { ManagedSerialPortsEvent } from "@/events/managed-serial-ports";
-import { PacketEvent } from "@/events/packet";
-import { PacketData } from "@/models/intern/packet-data";
-import { useAppStore } from "@/stores/app";
-import { useTheme } from "vuetify";
+import { PacketEvent, ManagedSerialPortsEvent } from "@/events";
+import { EventCallback, listen, TauriEvent } from "@tauri-apps/api/event";
 
-export type RemoveListenerFunction = () => void;
+export enum SerialVauEvents {
+  SERIAL_PORT_EVENT = "serial_ports_event",
+  SERIAL_PACKET_EVENT = "serial_packet_event",
+}
 
-export const useListener = (app = useAppStore()) => {
-  const { managedSerialPorts } = storeToRefs(app);
-  const { addPacket, getSerialPorts } = app;
-  const theme = useTheme();
+/**
+ * Listens for theme change events and invokes the handler when an event occurs.
+ * @param handler - The function to call when a theme change event occurs.
+ */
+export const listenThemeChangedEvent = async <T = string>(
+  handler: EventCallback<T>
+) => {
+  return await listen<T>(TauriEvent.WINDOW_THEME_CHANGED, (event) =>
+    handler(event)
+  );
+};
 
-  const themeChangedEventListener = ref<RemoveListenerFunction>();
-  const serialPortEventListener = ref<RemoveListenerFunction>();
-  const serialPortPacketEventListener = ref<RemoveListenerFunction>();
+/**
+ * Listens for serial port events and invokes the handler when an event occurs.
+ * @param handler - The function to call when a serial port event occurs.
+ * @returns A promise that resolves to a callback function that revokes the listener.
+ */
+export const listenSerialPortEvent = async <T = ManagedSerialPortsEvent>(
+  handler: EventCallback<T>
+) => {
+  return await listen<T>(SerialVauEvents.SERIAL_PORT_EVENT, (event) =>
+    handler(event)
+  );
+};
 
-  const setupListeners = async () => {
-    themeChangedEventListener.value = await listen(
-      TauriEvent.WINDOW_THEME_CHANGED,
-      (event) => {
-        const themeName = event.payload as string;
-        if (themeName === "dark" || themeName === "light") {
-          theme.global.name.value = themeName;
-        }
-      }
-    );
-
-    serialPortEventListener.value = await listen<ManagedSerialPortsEvent>(
-      "serial_ports_event",
-      (event) => {
-        managedSerialPorts.value = event.payload.ports;
-      }
-    );
-
-    serialPortPacketEventListener.value = await listen<PacketEvent>(
-      "serial_packet_event",
-      (event) => {
-        const packet = event.payload.packet;
-
-        const packetData: PacketData = {
-          packetDirection: packet.packetDirection,
-          timestampMillis: packet.timestampMillis,
-        };
-
-        addPacket(packet.portName, packetData);
-      }
-    );
-    getSerialPorts();
-  };
-
-  const cleanupListeners = () => {
-    if (themeChangedEventListener.value) {
-      themeChangedEventListener.value();
-      themeChangedEventListener.value = undefined;
-    }
-    if (serialPortEventListener.value) {
-      serialPortEventListener.value();
-      serialPortEventListener.value = undefined;
-    }
-    if (serialPortPacketEventListener.value) {
-      serialPortPacketEventListener.value();
-      serialPortPacketEventListener.value = undefined;
-    }
-  };
-
-  return {
-    setupListeners,
-    cleanupListeners,
-  };
+/**
+ * Listens for packet events and invokes the handler when an event occurs.
+ * @param handler - The function to call when a packet event occurs.
+ * @returns A promise that resolves to a callback function that revokes the listener.
+ */
+export const listenPacketEvent = async <T = PacketEvent>(
+  handler: EventCallback<T>
+) => {
+  return await listen<T>(SerialVauEvents.SERIAL_PACKET_EVENT, (event) =>
+    handler(event)
+  );
 };

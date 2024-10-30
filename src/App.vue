@@ -8,7 +8,7 @@
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted } from "vue";
-import { useListener } from "@/api/listener";
+import { useListener } from "@/utlis/listener";
 
 const { setupListeners, cleanupListeners } = useListener();
 
