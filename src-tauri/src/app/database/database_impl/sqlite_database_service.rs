@@ -1,7 +1,3 @@
-use error::{
-    InsertOpenSerialPortOptionsError, InsertPacketError, InsertSerialPortError,
-    UpdateOrInsertOpenSerialPortOptionsError,
-};
 use partial::serial_port::SerialPortId;
 use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectOptions, DatabaseConnection, EntityTrait,
@@ -9,12 +5,19 @@ use sea_orm::{
 };
 
 use crate::app::{
-    model::managed_serial_port::AppOpenSerialPortOptions, serial_state::model::CorePacket,
+    database::{
+        database_service::DatabaseService,
+        error::{
+            GetSerialPortError, InsertOpenSerialPortOptionsError, InsertPacketError,
+            InsertSerialPortError, UpdateOpenSerialPortOptionsError,
+        },
+    },
+    model::managed_serial_port::AppOpenSerialPortOptions,
+    serial_state::model::CorePacket,
 };
 
 pub mod entity;
 mod entity_impl;
-pub mod error;
 mod partial;
 
 #[derive(Debug, thiserror::Error)]
@@ -36,46 +39,43 @@ impl SqliteDatabase {
 
         Ok(Self { conn })
     }
+}
 
-    /// When opening a serial port, get the `id` and maintain it to be able to insert [`AppOpenSerialPortOptions`] and [`CorePacket`].
-    ///
-    /// See [`Self::insert_open_serial_port_options`] and [`Self::insert_packet`].
-    pub async fn get_serial_port_id_or_insert_returning_id(
-        &self,
-        name: &str,
-    ) -> Result<i32, InsertSerialPortError> {
-        tracing::trace!(name = %name, "Getting serial port id or inserting");
+impl DatabaseService for SqliteDatabase {
+    async fn get_serial_port_id(&self, name: &str) -> Result<Option<i32>, GetSerialPortError> {
+        tracing::trace!(name = %name, "Getting serial port id");
 
         let serial_port = entity::serial_port::Entity::find()
             .filter(entity::serial_port::Column::Name.eq(name))
             .into_partial_model::<SerialPortId>()
             .one(&self.conn)
-            .await?;
+            .await
+            .map_err(|err| GetSerialPortError::Get(err.into()))?;
 
-        match serial_port {
-            Some(serial_port) => Ok(serial_port.id),
-            None => self.insert_serial_port_returning_id(name.to_string()).await,
-        }
+        Ok(serial_port.map(|serial_port| serial_port.id))
     }
 
     async fn insert_serial_port_returning_id(
         &self,
-        name: String,
+        name: &str,
     ) -> Result<i32, InsertSerialPortError> {
         tracing::trace!(name = %name, "Inserting serial port");
 
         let serial_port = entity::serial_port::ActiveModel {
-            name: ActiveValue::Set(name),
+            name: ActiveValue::Set(name.to_owned()),
             ..Default::default()
         };
 
-        let id = serial_port.insert(&self.conn).await?.id;
+        let id = serial_port
+            .insert(&self.conn)
+            .await
+            .map_err(|err| InsertSerialPortError::Insert(err.into()))?
+            .id;
 
         Ok(id)
     }
 
-    /// See [`Self::get_serial_port_id_or_insert_returning_id`].
-    pub async fn insert_open_serial_port_options_returning_id(
+    async fn insert_serial_port_options_returning_id(
         &self,
         port_id: i32,
         options: AppOpenSerialPortOptions,
@@ -84,22 +84,26 @@ impl SqliteDatabase {
 
         let options = entity::open_options::ActiveModel::from((port_id, options));
 
-        let id = options.insert(&self.conn).await?.id;
+        let id = options
+            .insert(&self.conn)
+            .await
+            .map_err(|err| InsertOpenSerialPortOptionsError::Insert(err.into()))?
+            .id;
 
         Ok(id)
     }
 
-    pub async fn update_or_insert_serial_port_options_returning_id(
+    async fn update_serial_port_options_returning_id(
         &self,
         port_id: i32,
         options: AppOpenSerialPortOptions,
-    ) -> Result<i32, UpdateOrInsertOpenSerialPortOptionsError> {
-        tracing::trace!(port_id, "Updating or inserting open serial port options");
+    ) -> Result<Option<i32>, UpdateOpenSerialPortOptionsError> {
+        tracing::trace!(port_id, "Updating open serial port options");
 
         let options_opt = entity::open_options::Entity::find_by_id(port_id)
             .one(&self.conn)
             .await
-            .map_err(UpdateOrInsertOpenSerialPortOptionsError::Get)?;
+            .map_err(|err| UpdateOpenSerialPortOptionsError::Update(err.into()))?;
 
         match options_opt {
             Some(existing_options) => {
@@ -109,24 +113,16 @@ impl SqliteDatabase {
                 let id = options
                     .update(&self.conn)
                     .await
-                    .map_err(UpdateOrInsertOpenSerialPortOptionsError::Update)?
+                    .map_err(|err| UpdateOpenSerialPortOptionsError::Update(err.into()))?
                     .id;
 
-                Ok(id)
+                Ok(Some(id))
             }
-            None => {
-                let id = self
-                    .insert_open_serial_port_options_returning_id(port_id, options)
-                    .await
-                    .map_err(UpdateOrInsertOpenSerialPortOptionsError::Insert)?;
-
-                Ok(id)
-            }
+            None => Ok(None),
         }
     }
 
-    /// See [`Self::get_serial_port_id_or_insert_returning_id`].
-    pub async fn insert_packet_returning_id(
+    async fn insert_packet_returning_id(
         &self,
         port_id: i32,
         tag: String,
@@ -136,7 +132,11 @@ impl SqliteDatabase {
 
         let packet = entity::packet::ActiveModel::from((port_id, tag, packet));
 
-        let id = packet.insert(&self.conn).await?.id;
+        let id = packet
+            .insert(&self.conn)
+            .await
+            .map_err(|err| InsertPacketError::Insert(err.into()))?
+            .id;
 
         Ok(id)
     }

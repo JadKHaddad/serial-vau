@@ -6,7 +6,7 @@ use error::{
 };
 use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 
-use crate::serial_manager::SerialManager;
+use crate::{app::database::database_service::DatabaseService, serial_manager::SerialManager};
 
 use super::{
     database::database_impl::sqlite_database_service::{NewDatabaseError, SqliteDatabase},

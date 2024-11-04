@@ -6,7 +6,8 @@ use crate::app::{
 
 use super::error::{
     GetOrInsertSerialPortError, GetSerialPortError, InsertOpenSerialPortOptionsError,
-    InsertPacketError, InsertSerialPortError, UpdateOrInsertOpenSerialPortOptionsError,
+    InsertPacketError, InsertSerialPortError, UpdateOpenSerialPortOptionsError,
+    UpdateOrInsertOpenSerialPortOptionsError,
 };
 
 pub trait DatabaseService {
@@ -40,11 +41,31 @@ pub trait DatabaseService {
         options: AppOpenSerialPortOptions,
     ) -> impl Future<Output = Result<i32, InsertOpenSerialPortOptionsError>>;
 
-    fn update_or_insert_serial_port_options_returning_id(
+    fn update_serial_port_options_returning_id(
         &self,
         port_id: i32,
         options: AppOpenSerialPortOptions,
-    ) -> impl Future<Output = Result<i32, UpdateOrInsertOpenSerialPortOptionsError>>;
+    ) -> impl Future<Output = Result<Option<i32>, UpdateOpenSerialPortOptionsError>>;
+
+    async fn update_or_insert_serial_port_options_returning_id(
+        &self,
+        port_id: i32,
+        options: AppOpenSerialPortOptions,
+    ) -> Result<i32, UpdateOrInsertOpenSerialPortOptionsError> {
+        let result = self
+            .update_serial_port_options_returning_id(port_id, options.clone())
+            .await?;
+
+        let id = match result {
+            Some(id) => id,
+            None => {
+                self.insert_serial_port_options_returning_id(port_id, options)
+                    .await?
+            }
+        };
+
+        Ok(id)
+    }
 
     fn insert_packet_returning_id(
         &self,
