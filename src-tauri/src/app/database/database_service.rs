@@ -1,27 +1,17 @@
-use std::future::Future;
-
 use crate::app::{
     model::managed_serial_port::AppOpenSerialPortOptions, serial_state::model::CorePacket,
 };
 
-use super::{
-    error::{
-        GetOrInsertSerialPortError, GetSerialPortError, InsertPacketError, InsertSerialPortError,
-        UpdateOrInsertOpenSerialPortOptionsError,
-    },
-    model::UpdateOrInsert,
-};
+use super::{error::*, model::UpdateOrInsert};
 
+#[enum_dispatch::enum_dispatch]
 pub trait DatabaseService {
-    fn get_serial_port_id(
-        &self,
-        name: &str,
-    ) -> impl Future<Output = Result<Option<i32>, GetSerialPortError>>;
+    async fn get_serial_port_id(&self, name: &str) -> Result<Option<i32>, GetSerialPortError>;
 
-    fn insert_serial_port_returning_id(
+    async fn insert_serial_port_returning_id(
         &self,
         name: &str,
-    ) -> impl Future<Output = Result<i32, InsertSerialPortError>>;
+    ) -> Result<i32, InsertSerialPortError>;
 
     async fn get_serial_port_id_or_insert_returning_id(
         &self,
@@ -37,16 +27,16 @@ pub trait DatabaseService {
         Ok(id)
     }
 
-    fn update_or_insert_serial_port_options_returning_id(
+    async fn update_or_insert_serial_port_options_returning_id(
         &self,
         port_id: i32,
         options: AppOpenSerialPortOptions,
-    ) -> impl Future<Output = Result<UpdateOrInsert<i32>, UpdateOrInsertOpenSerialPortOptionsError>>;
+    ) -> Result<UpdateOrInsert<i32>, UpdateOrInsertOpenSerialPortOptionsError>;
 
-    fn insert_packet_returning_id(
+    async fn insert_packet_returning_id(
         &self,
         port_id: i32,
         tag: String,
         packet: CorePacket,
-    ) -> impl Future<Output = Result<i32, InsertPacketError>>;
+    ) -> Result<i32, InsertPacketError>;
 }

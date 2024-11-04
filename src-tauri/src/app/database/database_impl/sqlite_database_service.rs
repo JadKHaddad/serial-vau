@@ -5,14 +5,7 @@ use sea_orm::{
 };
 
 use crate::app::{
-    database::{
-        database_service::DatabaseService,
-        error::{
-            GetSerialPortError, InsertPacketError, InsertSerialPortError,
-            UpdateOrInsertOpenSerialPortOptionsError,
-        },
-        model::UpdateOrInsert,
-    },
+    database::{database_service::DatabaseService, error::*, model::UpdateOrInsert},
     model::managed_serial_port::AppOpenSerialPortOptions,
     serial_state::model::CorePacket,
 };
