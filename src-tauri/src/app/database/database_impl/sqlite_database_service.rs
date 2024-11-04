@@ -8,9 +8,10 @@ use crate::app::{
     database::{
         database_service::DatabaseService,
         error::{
-            GetSerialPortError, InsertOpenSerialPortOptionsError, InsertPacketError,
-            InsertSerialPortError, UpdateOpenSerialPortOptionsError,
+            GetSerialPortError, InsertPacketError, InsertSerialPortError,
+            UpdateOrInsertOpenSerialPortOptionsError,
         },
+        model::UpdateOrInsert,
     },
     model::managed_serial_port::AppOpenSerialPortOptions,
     serial_state::model::CorePacket,
@@ -75,35 +76,17 @@ impl DatabaseService for SqliteDatabase {
         Ok(id)
     }
 
-    async fn insert_serial_port_options_returning_id(
+    async fn update_or_insert_serial_port_options_returning_id(
         &self,
         port_id: i32,
         options: AppOpenSerialPortOptions,
-    ) -> Result<i32, InsertOpenSerialPortOptionsError> {
-        tracing::trace!(port_id, "Inserting open serial port options");
-
-        let options = entity::open_options::ActiveModel::from((port_id, options));
-
-        let id = options
-            .insert(&self.conn)
-            .await
-            .map_err(|err| InsertOpenSerialPortOptionsError::Insert(err.into()))?
-            .id;
-
-        Ok(id)
-    }
-
-    async fn update_serial_port_options_returning_id(
-        &self,
-        port_id: i32,
-        options: AppOpenSerialPortOptions,
-    ) -> Result<Option<i32>, UpdateOpenSerialPortOptionsError> {
-        tracing::trace!(port_id, "Updating open serial port options");
+    ) -> Result<UpdateOrInsert<i32>, UpdateOrInsertOpenSerialPortOptionsError> {
+        tracing::trace!(port_id, "Updating or Inserting open serial port options");
 
         let options_opt = entity::open_options::Entity::find_by_id(port_id)
             .one(&self.conn)
             .await
-            .map_err(|err| UpdateOpenSerialPortOptionsError::Update(err.into()))?;
+            .map_err(|err| UpdateOrInsertOpenSerialPortOptionsError::Update(err.into()))?;
 
         match options_opt {
             Some(existing_options) => {
@@ -113,12 +96,22 @@ impl DatabaseService for SqliteDatabase {
                 let id = options
                     .update(&self.conn)
                     .await
-                    .map_err(|err| UpdateOpenSerialPortOptionsError::Update(err.into()))?
+                    .map_err(|err| UpdateOrInsertOpenSerialPortOptionsError::Update(err.into()))?
                     .id;
 
-                Ok(Some(id))
+                Ok(UpdateOrInsert::Update(id))
             }
-            None => Ok(None),
+            None => {
+                let options = entity::open_options::ActiveModel::from((port_id, options));
+
+                let id = options
+                    .insert(&self.conn)
+                    .await
+                    .map_err(|err| UpdateOrInsertOpenSerialPortOptionsError::Insert(err.into()))?
+                    .id;
+
+                Ok(UpdateOrInsert::Insert(id))
+            }
         }
     }
 

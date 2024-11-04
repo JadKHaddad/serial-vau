@@ -27,31 +27,11 @@ pub enum GetOrInsertSerialPortError {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum InsertOpenSerialPortOptionsError {
-    #[error("Failed to insert open serial port options: {0}")]
-    Insert(#[source] anyhow::Error),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum UpdateOpenSerialPortOptionsError {
-    #[error("Failed to update open serial port options: {0}")]
-    Update(#[source] anyhow::Error),
-}
-
-#[derive(Debug, thiserror::Error)]
 pub enum UpdateOrInsertOpenSerialPortOptionsError {
     #[error("Failed to update open serial port options: {0}")]
-    Update(
-        #[from]
-        #[source]
-        UpdateOpenSerialPortOptionsError,
-    ),
+    Update(#[source] anyhow::Error),
     #[error("Failed to insert open serial port options: {0}")]
-    Insert(
-        #[from]
-        #[source]
-        InsertOpenSerialPortOptionsError,
-    ),
+    Insert(#[source] anyhow::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
