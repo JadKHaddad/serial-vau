@@ -12,8 +12,8 @@ pub mod database_service;
 pub mod error;
 pub mod model;
 
-#[derive(Debug)]
 #[enum_dispatch::enum_dispatch(DatabaseService)]
+#[derive(Debug, Clone)]
 pub enum Database {
     SqliteDatabase,
 }

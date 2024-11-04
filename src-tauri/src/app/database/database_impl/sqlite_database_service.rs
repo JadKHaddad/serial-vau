@@ -92,6 +92,8 @@ impl DatabaseService for SqliteDatabase {
                     .map_err(|err| UpdateOrInsertOpenSerialPortOptionsError::Update(err.into()))?
                     .id;
 
+                tracing::trace!(port_id, "Updated open serial port options");
+
                 Ok(UpdateOrInsert::Update(id))
             }
             None => {
@@ -102,6 +104,8 @@ impl DatabaseService for SqliteDatabase {
                     .await
                     .map_err(|err| UpdateOrInsertOpenSerialPortOptionsError::Insert(err.into()))?
                     .id;
+
+                tracing::trace!(port_id, "Inserted open serial port options");
 
                 Ok(UpdateOrInsert::Insert(id))
             }
