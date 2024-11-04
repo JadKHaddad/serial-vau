@@ -8,7 +8,7 @@ use sea_orm::{
     QueryFilter,
 };
 
-use super::{
+use crate::app::{
     model::managed_serial_port::AppOpenSerialPortOptions, serial_state::model::CorePacket,
 };
 

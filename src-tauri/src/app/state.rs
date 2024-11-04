@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedReceiver as MPSCUnboundedReceiver;
 use crate::serial_manager::SerialManager;
 
 use super::{
-    database::{Database, NewDatabaseError},
+    database::database_impl::sqlite_database_service::{Database, NewDatabaseError},
     model::managed_serial_port::{AppManagedSerialPort, AppOpenSerialPortOptions},
     serial_state::{model::CorePacket, CoreSerialState},
 };

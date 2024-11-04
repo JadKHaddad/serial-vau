@@ -1,5 +1,8 @@
 [workspace]
-members = ["src-tauri", "migration"]
+members = [
+    "src-tauri",
+    "src-tauri/src/app/database/database_impl/sqlite_database_service/migration",
+]
 default-members = ["src-tauri"]
 resolver = "2"
 
