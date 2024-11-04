@@ -2,7 +2,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::serial_manager::{
     error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError},
-    models::{SerialManagerOpenSerialPortOptions, SerialManagerPort},
+    model::{SerialManagerOpenSerialPortOptions, SerialManagerPort},
     serial_manager_service::SerialManagerService,
 };
 

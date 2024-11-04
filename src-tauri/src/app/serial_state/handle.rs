@@ -104,7 +104,7 @@ pub enum SendError {
 }
 
 mod impl_from {
-    use crate::serial_manager::models::{
+    use crate::serial_manager::model::{
         SerialManagerDataBits, SerialManagerFlowControl, SerialManagerOpenSerialPortOptions,
         SerialManagerParity, SerialManagerStopBits,
     };

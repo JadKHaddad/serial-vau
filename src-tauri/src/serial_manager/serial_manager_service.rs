@@ -2,7 +2,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 
 use super::{
     error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError},
-    models::{SerialManagerOpenSerialPortOptions, SerialManagerPort},
+    model::{SerialManagerOpenSerialPortOptions, SerialManagerPort},
 };
 
 pub trait SerialManagerService {

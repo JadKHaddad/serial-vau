@@ -1,6 +1,6 @@
 use derive_more::From;
 use error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError};
-use models::{SerialManagerOpenSerialPortOptions, SerialManagerPort};
+use model::{SerialManagerOpenSerialPortOptions, SerialManagerPort};
 use serial_manager_impl::{
     dummy_serial_manager::DummySerialManager, tokio_serial_manager::TokioSerialManager,
 };
@@ -8,7 +8,7 @@ use serial_manager_service::SerialManagerService;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 pub mod error;
-pub mod models;
+pub mod model;
 pub mod serial_manager_impl;
 pub mod serial_manager_service;
 

@@ -3,7 +3,7 @@ use tokio_serial::{SerialPortBuilderExt, SerialPortInfo};
 
 use crate::serial_manager::{
     error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError},
-    models::{SerialManagerOpenSerialPortOptions, SerialManagerPort},
+    model::{SerialManagerOpenSerialPortOptions, SerialManagerPort},
     serial_manager_service::SerialManagerService,
 };
 
@@ -60,7 +60,7 @@ impl From<SerialPortInfo> for SerialManagerPort {
 }
 
 mod impl_from {
-    use crate::serial_manager::models::{
+    use crate::serial_manager::model::{
         SerialManagerDataBits, SerialManagerFlowControl, SerialManagerParity, SerialManagerStopBits,
     };
 
