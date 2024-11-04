@@ -24,11 +24,11 @@ pub enum NewDatabaseError {
 }
 
 #[derive(Debug, Clone)]
-pub struct Database {
+pub struct SqliteDatabase {
     conn: DatabaseConnection,
 }
 
-impl Database {
+impl SqliteDatabase {
     pub async fn new(connection_string: &str) -> Result<Self, NewDatabaseError> {
         let connect_options = ConnectOptions::new(connection_string).to_owned();
 
