@@ -124,11 +124,22 @@ pub fn run() -> anyhow::Result<()> {
     let serial_manager = TokioSerialManager::new();
 
     // TODO: run the migrations!
-    // We might need to create the sqlite database file first if (sqlite connection) and it doesn't exist.
-    let db = tauri::async_runtime::block_on(SqliteDatabase::new("sqlite:../sqlite.db"))?;
+    let db = tauri::async_runtime::block_on(async {
+        const DB_FILE: &str = "../sqlite.db";
 
+        if !std::path::Path::new(DB_FILE).exists() {
 
-    // TODO: Use in setup!
+            tracing::info!("Creating sqlite.db file");
+
+            let _ = tokio::fs::File::create(DB_FILE).await.context("Error while creating sqlite.db")?;
+        }
+
+        let db = SqliteDatabase::new(&format!("sqlite:{DB_FILE}")).await.context("Error while creating SqliteDatabase")?;
+
+        anyhow::Result::<SqliteDatabase>::Ok(db)
+    })?;
+
+    // TODO: we have to find a way to load the app, show in ui that we are still loading.
     let app_state = AppState::new(db.into(), serial_manager.into());
 
     let tauri_app_state = TauriAppState::new(app_state);
