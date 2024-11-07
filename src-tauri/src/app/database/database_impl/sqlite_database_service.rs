@@ -3,6 +3,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue, ColumnTrait, ConnectOptions, DatabaseConnection, EntityTrait,
     QueryFilter,
 };
+use sqlite_migration::{Migrator, MigratorTrait};
 
 use crate::app::{
     database::{database_service::DatabaseService, error::*, model::UpdateOrInsert},
@@ -32,6 +33,10 @@ impl SqliteDatabase {
         let conn = sea_orm::Database::connect(connect_options).await?;
 
         Ok(Self { conn })
+    }
+
+    pub async fn migrate(&self) -> Result<(), sea_orm::error::DbErr> {
+        Migrator::up(&self.conn, None).await
     }
 }
 

@@ -38,7 +38,9 @@ sea-orm = { version = "1.0.1", features = [
     "runtime-tokio-rustls",
     "macros",
 ] }
+sqlite_migration = { path = "src/app/database/database_impl/sqlite_database_service/migration" }
 derive_more = { version = "0.99.18", features = ["from"] }
+directories = "5.0.1"
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.14.0"

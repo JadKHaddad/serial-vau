@@ -120,24 +120,42 @@ fn do_error() -> Result<(), AppError> {
     return Err(anyhow::anyhow!("Oops!").into());
 }
 
-pub fn run() -> anyhow::Result<()> {
-    let serial_manager = TokioSerialManager::new();
-
-    // TODO: run the migrations!
+fn create_db_blocking() -> Result<SqliteDatabase, anyhow::Error> {
     let db = tauri::async_runtime::block_on(async {
-        const DB_FILE: &str = "../sqlite.db";
+        let user_dirs = directories::UserDirs::new().context("No home directory")?;
+        let home_dir = user_dirs.home_dir();
+        let db_file_dir = home_dir.join(".serial-vau");
+        let db_file_path = db_file_dir.join("sqlite.db");
 
-        if !std::path::Path::new(DB_FILE).exists() {
+        if !db_file_path.exists() {
+            if !db_file_dir.exists() {
+                tracing::info!("Creating .serial-vau directory at {:?}", db_file_dir);
 
-            tracing::info!("Creating sqlite.db file");
+                tokio::fs::create_dir_all(&db_file_dir).await.context("Error creating .serial-vau directory")?;
+            }
+        
+            tracing::info!("Creating sqlite.db file at {:?}", db_file_path);
 
-            let _ = tokio::fs::File::create(DB_FILE).await.context("Error while creating sqlite.db")?;
+            let _ = tokio::fs::File::create(&db_file_path).await.context("Error creating sqlite.db")?;
         }
 
-        let db = SqliteDatabase::new(&format!("sqlite:{DB_FILE}")).await.context("Error while creating SqliteDatabase")?;
+        let db_file_path_str = db_file_path.to_str().context("Error converting db_file_path to str")?;
+        let db = SqliteDatabase::new(&format!("sqlite:{db_file_path_str}")).await.context("Error creating SqliteDatabase")?;
+
+        tracing::info!("Running database migrations");
+
+        db.migrate().await.context("Error migrating database")?;
 
         anyhow::Result::<SqliteDatabase>::Ok(db)
     })?;
+    
+    Ok(db)
+}
+
+pub fn run() -> anyhow::Result<()> {
+    let serial_manager = TokioSerialManager::new();
+
+    let db = create_db_blocking()?;
 
     // TODO: we have to find a way to load the app, show in ui that we are still loading.
     let app_state = AppState::new(db.into(), serial_manager.into());
@@ -205,3 +223,4 @@ pub fn run() -> anyhow::Result<()> {
         .run(tauri::generate_context!())
         .context("Error while running tauri application")
 }
+

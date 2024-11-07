@@ -23,6 +23,7 @@ pub struct AppState {
     db: Database,
 }
 
+// TODO: do the chaching for the serial port ids
 impl AppState {
     pub fn new(db: Database, serial_manager: SerialManager) -> Self {
         let serial_state = CoreSerialState::new(serial_manager);
