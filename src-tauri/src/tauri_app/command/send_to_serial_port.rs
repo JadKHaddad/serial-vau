@@ -1,7 +1,8 @@
 use tokio_util::bytes::Bytes;
 
-use crate::core::state::{
-    open_serial_port::{CoreOutgoingPacket, CorePacketOrigin, SendError},
+use crate::app::serial_state::{
+    handle::SendError,
+    model::{CoreOutgoingPacket, CorePacketOrigin},
     CoreSerialState,
 };
 

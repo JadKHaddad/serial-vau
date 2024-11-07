@@ -1,8 +1,9 @@
 use std::io::Error as IOError;
 
-use tokio_serial::Error as TokioSerialError;
-
-use crate::core::{codec::lines_codec::LinesCodecError, serial::AvailablePortsError};
+use crate::{
+    app::serial_state::codec::lines_codec::LinesCodecError,
+    serial_manager::error::{SerialManagerAvailablePortsError, SerialManagerOpenPortError},
+};
 
 /// Error returned by [`StateInner::managed_serial_ports`](crate::core::state::StateInner::managed_serial_ports).
 #[derive(Debug, thiserror::Error)]
@@ -11,7 +12,7 @@ pub enum CoreManagedSerialPortsError {
     AvailablePortsError(
         #[source]
         #[from]
-        AvailablePortsError,
+        SerialManagerAvailablePortsError,
     ),
 }
 
@@ -77,6 +78,6 @@ pub enum CoreOpenSerialPortError {
     FailedToOpen(
         #[source]
         #[from]
-        TokioSerialError,
+        SerialManagerOpenPortError,
     ),
 }

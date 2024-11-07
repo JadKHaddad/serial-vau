@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "src-tauri",
+    "src-tauri/src/app/database/database_impl/sqlite_database_service/migration",
+]
+default-members = ["src-tauri"]
+resolver = "2"
+
+[patch.crates-io]
+mio-serial = { git = "https://github.com/JadKHaddad/mio-serial.git", branch = "stop-bits-unwrap-or-one" }

@@ -2,33 +2,43 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use error::{CoreManagedSerialPortsError, CoreOpenSerialPortError, CorePacketError};
 use futures::{SinkExt, StreamExt};
-use open_serial_port::{
-    CoreIncomingPacket, CoreOpenSerialPort, CoreOpenSerialPortOptions, CoreOutgoingPacket,
-    CorePacket, CorePacketDirection, SendError,
+use handle::{CoreOpenSerialPort, SendError, TxHandle};
+use model::{
+    CoreManagedSerialPort, CoreOpenStatus, CoreSerialPort, Status,
+    {
+        CoreIncomingPacket, CoreOpenSerialPortOptions, CoreOutgoingPacket, CorePacket,
+        CorePacketDirection,
+    },
 };
 #[cfg(feature = "subscriptions")]
-use open_serial_port::{CorePacketOrigin, CoreSubscriptionPacketOrigin, TxHandle};
+use model::{CorePacketOrigin, CoreSubscriptionPacketOrigin};
 use tokio::sync::{mpsc::UnboundedReceiver as MPSCUnboundedReceiver, RwLock};
-use tokio_serial::SerialPortBuilderExt;
 use tokio_util::{
     bytes::BytesMut,
     codec::{BytesCodec, Decoder, FramedRead, FramedWrite},
     sync::CancellationToken,
 };
 
-use super::codec::lines_codec::LinesCodec;
+use crate::serial_manager::{serial_manager_service::SerialManagerService, SerialManager};
 
-use super::serial::{
-    managed_serial_port::{CoreManagedSerialPort, CoreOpenStatus, Status},
-    CoreSerialPort,
-};
+use codec::lines_codec::LinesCodec;
 
+pub mod codec;
 pub mod error;
-pub mod open_serial_port;
+pub mod handle;
+pub mod model;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CoreSerialState {
     inner: Arc<StateInner>,
+}
+
+impl CoreSerialState {
+    pub fn new(manager: SerialManager) -> Self {
+        Self {
+            inner: Arc::new(StateInner::new(manager)),
+        }
+    }
 }
 
 impl Deref for CoreSerialState {
@@ -54,8 +64,9 @@ type Subscriptions = HashMap<String, HashMap<String, Option<TxHandle>>>;
 
 /// ## Note
 /// Locks are not optimized. See branch [`feat/optimize-locks`](https://github.com/JadKHaddad/serial-vau/tree/feat/optimize-locks) for optimized locks sacrificing readability.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct StateInner {
+    manager: SerialManager,
     open_serial_ports: RwLock<OpenSerialPorts>,
     /// Closing the Subscriber serial port will set its value to `None`. The subscription will not be removed.
     ///
@@ -71,6 +82,15 @@ pub struct StateInner {
 }
 
 impl StateInner {
+    fn new(manager: SerialManager) -> Self {
+        Self {
+            manager,
+            open_serial_ports: RwLock::new(HashMap::new()),
+            #[cfg(feature = "subscriptions")]
+            subscriptions: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
     /// ## Locks
     ///
     /// - Read: [`Self::open_serial_ports`]
@@ -83,7 +103,7 @@ impl StateInner {
     pub async fn managed_serial_ports(
         &self,
     ) -> Result<Vec<CoreManagedSerialPort>, CoreManagedSerialPortsError> {
-        let available_serial_ports = super::serial::available_ports()?;
+        let available_serial_ports = self.manager.available_ports()?;
         let open_serial_ports = self.open_serial_ports.read().await;
         #[cfg(feature = "subscriptions")]
         let subscriptions = self.subscriptions.read().await;
@@ -366,9 +386,9 @@ impl CoreSerialState {
 - Write: [`StateInner::subscriptions`]. Inherited from [`StateInner::add_open_serial_port`].
     "
     )]
-    pub async fn open_serial_port(
-        &self,
-        name: &str,
+    pub async fn open_serial_port<'a>(
+        &'a self,
+        name: &'a str,
         options: CoreOpenSerialPortOptions,
     ) -> Result<MPSCUnboundedReceiver<Result<CorePacket, CorePacketError>>, CoreOpenSerialPortError>
     {
@@ -381,13 +401,9 @@ impl CoreSerialState {
             .then_some(name)
             .ok_or(CoreOpenSerialPortError::AlreadyOpen)?;
 
-        let port = tokio_serial::new(port_to_open_name, options.baud_rate)
-            .stop_bits(options.stop_bits.into())
-            .data_bits(options.data_bits.into())
-            .flow_control(options.flow_control.into())
-            .parity(options.parity.into())
-            .timeout(options.timeout)
-            .open_native_async()?;
+        let (initial_read_state, options) = options.split_into_read_state_and_manager_options();
+
+        let port = self.manager.open_port(port_to_open_name, options)?;
 
         let (port_read, port_write) = tokio::io::split(port);
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<CoreOutgoingPacket>();
@@ -400,8 +416,7 @@ impl CoreSerialState {
         let mut framed_read_bytes_port = FramedRead::new(port_read, BytesCodec::new());
         let mut framed_write_bytes_port = FramedWrite::new(port_write, BytesCodec::new());
 
-        let (read_state_tx, mut read_state_rx) =
-            tokio::sync::watch::channel(options.initial_read_state);
+        let (read_state_tx, mut read_state_rx) = tokio::sync::watch::channel(initial_read_state);
 
         self.add_open_serial_port(CoreOpenSerialPort::new(
             CoreSerialPort::new(name.into()),
