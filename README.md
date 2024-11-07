@@ -13,11 +13,11 @@
 
 ## 💿 Commands
 
-| Package Manager                                               | Command        |
-|---------------------------------------------------------------|----------------|
-| [ui & serial vau](https://tauri.app/)                         | `cargo tauri`  |
-| [ui dev](https://docs.npmjs.com/cli/v7/commands/npm-install)  | `npm run dev`  |
-| [serial vau](https://www.rust-lang.org/tools/install)         | `cargo run`    |
+| Package Manager                                               | Command            |
+|---------------------------------------------------------------|--------------------|
+| [ui & serial vau](https://tauri.app/)                         | `cargo tauri dev`  |
+| [ui dev](https://docs.npmjs.com/cli/v7/commands/npm-install)  | `npm run dev`      |
+| [serial vau](https://www.rust-lang.org/tools/install)         | `cargo run`        |
 
 ## ✨ Features
 
@@ -27,7 +27,9 @@
 
 ### Screenshots
 
-![alt text](screenshots/image.png)
+![Serial Port Page](screenshots/serialPorts.png)
+
+![Monitor Page (old)](screenshots/monitor.png)
 
 ## 💪 Support Serial Vau Development
 
