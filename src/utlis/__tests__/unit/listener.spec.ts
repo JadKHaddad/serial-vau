@@ -47,7 +47,7 @@ describe("uesListener composable", () => {
 
     await setupListeners();
 
-    expect(listen).toHaveBeenCalledTimes(3);
+    expect(listen).toHaveBeenCalledTimes(4);
     expect(listen).toHaveBeenCalledWith(
       "tauri://theme-changed",
       expect.any(Function)
@@ -58,6 +58,11 @@ describe("uesListener composable", () => {
     );
     expect(listen).toHaveBeenCalledWith(
       "serial_packet_event",
+      expect.any(Function)
+    );
+    expect(listen).toHaveBeenCalledWith(
+      "error_event",
+      // TODO: See src\utlis\listener.ts
       expect.any(Function)
     );
 

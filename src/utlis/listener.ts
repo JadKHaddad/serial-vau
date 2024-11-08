@@ -45,6 +45,7 @@ export const useListener = (app = useAppStore()) => {
   };
 
   const onErrorEventListener = (event: Event<ErrorEvent>) => {
+    // TODO: we are only logging the error for now
     console.error(event.payload.error);
   };
 
