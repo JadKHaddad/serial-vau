@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 use crate::{
     app::{
@@ -7,7 +7,12 @@ use crate::{
         state::error::{AppManagedSerialPortsError, AppOpenSerialPortError, AppPacketError},
     },
     tauri_app::{
-        event::{emit_managed_serial_ports::emit_managed_serial_ports, model::packet::PacketEvent},
+        event::{
+            emit_error::emit_error_event,
+            emit_managed_serial_ports::emit_managed_serial_ports_event,
+            emit_packet::emit_packet_event,
+            model::{error::ErrorEvent, packet::PacketEvent},
+        },
         model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions},
         state::TauriAppState,
     },
@@ -41,7 +46,7 @@ pub async fn open_serial_port_intern(
                         packet: packet.into(),
                     };
 
-                    let _ = app.emit_all("serial_packet_event", &event);
+                    let _ = emit_packet_event(&app, &event);
                 }
                 Err(err) => {
                     tracing::error!(%err, from=%name, "Error receiving data");
@@ -58,9 +63,13 @@ pub async fn open_serial_port_intern(
                         // Save packet error will not break the read loop in `State.open_serial_port`.
                         AppPacketError::SavePacketError(..) => {}
                         _ => {
-                            let _ = emit_managed_serial_ports(&app, &tauri_app_state).await;
+                            let _ = emit_managed_serial_ports_event(&app, &tauri_app_state).await;
                         }
                     }
+
+                    let error_event = ErrorEvent::from(err);
+
+                    let _ = emit_error_event(&app, &error_event);
                 }
             }
         }

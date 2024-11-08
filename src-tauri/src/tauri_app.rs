@@ -10,7 +10,7 @@ use command::{
 };
 use futures::StreamExt;
 use error::AppError;
-use event::emit_managed_serial_ports::emit_managed_serial_ports;
+use event::{emit_error::emit_error_event, emit_managed_serial_ports::emit_managed_serial_ports_event, model::error::ErrorEvent};
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
@@ -183,7 +183,9 @@ pub fn run() -> anyhow::Result<()> {
                                     Err(err) => {
                                         tracing::warn!(%err, "Serial event error");
                                         
-                                        // TODO: Emit error and break
+                                        let error_event = ErrorEvent::from(err);
+
+                                        let _ = emit_error_event(&app_handle, &error_event);
 
                                         break;
                                     }
@@ -197,7 +199,7 @@ pub fn run() -> anyhow::Result<()> {
                                     },
                                 }
 
-                                let _ = emit_managed_serial_ports(&app_handle, &tauri_app_state_wachter).await;
+                                let _ = emit_managed_serial_ports_event(&app_handle, &tauri_app_state_wachter).await;
                             }
 
                             tracing::debug!("Serial events watcher terminated");
