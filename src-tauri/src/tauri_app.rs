@@ -8,13 +8,14 @@ use command::{
     subscribe::{subscribe_intern, unsubscribe_intern},
     toggle_read_state::toggle_read_state_intern,
 };
+use futures::StreamExt;
 use error::AppError;
 use event::emit_managed_serial_ports::emit_managed_serial_ports;
 use model::{managed_serial_port::ManagedSerialPort, open_options::OpenSerialPortOptions};
 use state::TauriAppState as TauriAppState;
 use tauri::{AppHandle, Manager, State};
 
-use crate::app::state::AppState;
+use crate::{app::{database::database_impl::sqlite_database_service::SqliteDatabase, state::AppState}, serial_manager::serial_manager_impl::tokio_serial_manager::TokioSerialManager, watcher::{model::WatcherEventType, watcher_impl::watcher::WatcherImpl, watcher_service::WatcherService, Watcher}};
 
 mod command;
 mod error;
@@ -119,27 +120,61 @@ fn do_error() -> Result<(), AppError> {
     return Err(anyhow::anyhow!("Oops!").into());
 }
 
+fn create_db_blocking() -> Result<SqliteDatabase, anyhow::Error> {
+    let db = tauri::async_runtime::block_on(async {
+        let user_dirs = directories::UserDirs::new().context("No home directory")?;
+        let home_dir = user_dirs.home_dir();
+        let db_file_dir = home_dir.join(".serial-vau");
+        let db_file_path = db_file_dir.join("sqlite.db");
+
+        if !db_file_path.exists() {
+            if !db_file_dir.exists() {
+                tracing::info!("Creating .serial-vau directory at {:?}", db_file_dir);
+
+                tokio::fs::create_dir_all(&db_file_dir).await.context("Error creating .serial-vau directory")?;
+            }
+        
+            tracing::info!("Creating sqlite.db file at {:?}", db_file_path);
+
+            let _ = tokio::fs::File::create(&db_file_path).await.context("Error creating sqlite.db")?;
+        }
+
+        let db_file_path_str = db_file_path.to_str().context("Error converting db_file_path to str")?;
+        let db = SqliteDatabase::new(&format!("sqlite:{db_file_path_str}")).await.context("Error creating SqliteDatabase")?;
+
+        tracing::info!("Running database migrations");
+
+        db.migrate().await.context("Error migrating database")?;
+
+        anyhow::Result::<SqliteDatabase>::Ok(db)
+    })?;
+    
+    Ok(db)
+}
+
 pub fn run() -> anyhow::Result<()> {
-    let app_state = AppState::default();
+    let serial_manager = TokioSerialManager::new();
+
+    let db = create_db_blocking()?;
+
+    // TODO: we have to find a way to load the app, show in ui that we are still loading.
+    let app_state = AppState::new(db.into(), serial_manager.into());
+
     let tauri_app_state = TauriAppState::new(app_state);
     
     let tauri_app_state_wachter = tauri_app_state.clone();
     tauri::Builder::default()
         .manage(tauri_app_state)
         .setup(|app| {
-            #[cfg(windows)]
-            {
-                use crate::core::serial::watcher::windows::{SerialEventType, Watcher as SerialWatcher};
-                use futures::StreamExt;
-
                 let app_handle = app.app_handle().clone();
                 tauri::async_runtime::spawn(async move {
                     let pool = tokio_util::task::LocalPoolHandle::new(1);
 
                     let _ = pool
                         .spawn_pinned(|| async move {
-                            let watcher = SerialWatcher::new()?;
-                            let mut stream = std::pin::pin!(watcher.serial_port_events_stream()?);
+                            let watcher: Watcher = WatcherImpl::new()?.into();
+                        
+                            let mut stream = std::pin::pin!(watcher.events_stream()?);
 
                             tracing::debug!("Starting serial events watcher");
 
@@ -153,10 +188,10 @@ pub fn run() -> anyhow::Result<()> {
                                         break;
                                     }
                                     Ok(event) => match event.event_type {
-                                        SerialEventType::Creation => {
+                                        WatcherEventType::Creation => {
                                             tracing::trace!(name=%event.serial_port.name(), "Serial creation event detected");
                                         }
-                                        SerialEventType::Deletion => {
+                                        WatcherEventType::Deletion => {
                                             tracing::trace!(name=%event.serial_port.name(), "Serial deletion event detected");
                                         }
                                     },
@@ -171,7 +206,7 @@ pub fn run() -> anyhow::Result<()> {
                         })
                         .await;
                 });
-            }
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -188,3 +223,4 @@ pub fn run() -> anyhow::Result<()> {
         .run(tauri::generate_context!())
         .context("Error while running tauri application")
 }
+

@@ -1,11 +1,11 @@
 use crate::{
-    app::state::{AppManagedSerialPortsError, AppState},
-    core::state::CoreSerialState as SerialState,
+    app::serial_state::CoreSerialState as SerialState,
+    app::state::{error::AppManagedSerialPortsError, AppState},
 };
 
 use super::model::managed_serial_port::ManagedSerialPort;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct TauriAppState {
     app_state: AppState,
 }

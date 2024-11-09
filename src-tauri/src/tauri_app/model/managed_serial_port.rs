@@ -42,7 +42,7 @@ mod core_impl {
     use super::*;
     use crate::{
         app::model::managed_serial_port::AppManagedSerialPort,
-        core::serial::managed_serial_port::{CoreOpenStatus, CoreReadState, Status as CoreStatus},
+        app::serial_state::model::{CoreOpenStatus, CoreReadState, Status as CoreStatus},
     };
 
     impl From<CoreOpenStatus> for OpenStatus {
@@ -116,7 +116,10 @@ mod core_impl {
 mod tests {
     use super::*;
 
-    use crate::core::state::open_serial_port::CoreOpenSerialPortOptions;
+    use crate::app::{
+        model::managed_serial_port::AppOpenSerialPortOptions,
+        serial_state::model::CoreOpenSerialPortOptions,
+    };
 
     #[test]
     #[ignore = "Only used for manual verification"]
@@ -130,7 +133,11 @@ mod tests {
             subscriptions: vec!["COM2".to_string()],
             #[cfg(feature = "subscriptions")]
             subscribed_to: vec!["COM3".to_string()],
-            last_used_open_options: CoreOpenSerialPortOptions::default().into(),
+            last_used_open_options: AppOpenSerialPortOptions {
+                tag: "tag".to_string(),
+                core_options: CoreOpenSerialPortOptions::default(),
+            }
+            .into(),
         };
 
         let serialized = serde_json::to_string_pretty(&managed_serial_port).unwrap();
@@ -148,7 +155,11 @@ mod tests {
             subscriptions: vec!["COM2".to_string()],
             #[cfg(feature = "subscriptions")]
             subscribed_to: vec!["COM3".to_string()],
-            last_used_open_options: CoreOpenSerialPortOptions::default().into(),
+            last_used_open_options: AppOpenSerialPortOptions {
+                tag: "tag".to_string(),
+                core_options: CoreOpenSerialPortOptions::default(),
+            }
+            .into(),
         };
 
         let serialized = serde_json::to_string_pretty(&managed_serial_port).unwrap();
