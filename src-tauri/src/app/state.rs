@@ -52,9 +52,9 @@ impl AppState {
         Ok(AppOpenSerialPortOptions::default())
     }
 
-    /// Get all the open options for all the open serial ports.
+    /// Get all the open options for all serial ports.
     ///
-    /// Returns a map of the port name to the open options.
+    /// Returns a map of the port name as key and the open options as value.
     pub async fn get_all_open_serial_port_options(
         &self,
     ) -> Result<HashMap<String, AppOpenSerialPortOptions>, AppGetOpenSerialPortOptionsError> {

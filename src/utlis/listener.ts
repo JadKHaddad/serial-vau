@@ -4,6 +4,7 @@ import { ref } from "vue";
 import { ManagedSerialPortsEvent } from "@/events";
 import { PacketData } from "@/models/intern/packet-data";
 import {
+  listenErrorEvent,
   listenPacketEvent,
   listenSerialPortEvent,
   listenThemeChangedEvent,
@@ -19,6 +20,7 @@ export const useListener = (app = useAppStore()) => {
   const themeChangedEventListener = ref<UnlistenFn>();
   const serialPortEventListener = ref<UnlistenFn>();
   const serialPortPacketEventListener = ref<UnlistenFn>();
+  const errorEventListener = ref<UnlistenFn>();
 
   const onThemeEventListenerTrigger = (event: Event<string>) => {
     const themeName = event.payload;
@@ -42,6 +44,11 @@ export const useListener = (app = useAppStore()) => {
     managedSerialPorts.value = event.payload.ports;
   };
 
+  const onErrorEventListener = (event: Event<ErrorEvent>) => {
+    // TODO: we are only logging the error for now
+    console.error(event.payload.error);
+  };
+
   const setupListeners = async () => {
     themeChangedEventListener.value = await listenThemeChangedEvent(
       onThemeEventListenerTrigger
@@ -54,6 +61,8 @@ export const useListener = (app = useAppStore()) => {
     serialPortPacketEventListener.value = await listenPacketEvent(
       onSerialPortPacketEventListener
     );
+
+    errorEventListener.value = await listenErrorEvent(onErrorEventListener);
 
     getSerialPorts();
   };
