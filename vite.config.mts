@@ -7,6 +7,9 @@ import Vue from "@vitejs/plugin-vue";
 import VueRouter from "unplugin-vue-router/vite";
 import Vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
+import autoprefixer from "autoprefixer";
+import tailwind from "tailwindcss";
+
 // Utilities
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
@@ -80,6 +83,11 @@ export default defineConfig(({ mode }) => {
       "TAURI_PLATFORM_TYPE",
       "TAURI_DEBUG",
     ],
+    css: {
+      postcss: {
+        plugins: [tailwind(), autoprefixer()],
+      },
+    },
     build: {
       // Tauri uses Chromium on Windows and WebKit on macOS and Linux
       target:
