@@ -11,7 +11,7 @@
   "dependencies": {
     "@mdi/font": "7.4.47",
     "@radix-icons/vue": "^1.0.0",
-    "@tauri-apps/api": "^1.6.0",
+    "@tauri-apps/api": "^2.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "core-js": "^3.37.1",
