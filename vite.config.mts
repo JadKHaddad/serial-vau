@@ -10,6 +10,9 @@ import Vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 import autoprefixer from "autoprefixer";
 import tailwind from "tailwindcss";
 
+import { createHtmlPlugin } from "vite-plugin-html";
+import vueDevTools from "vite-plugin-vue-devtools";
+
 // Utilities
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
@@ -18,6 +21,8 @@ import { fileURLToPath, URL } from "node:url";
 export default defineConfig(({ mode }) => {
   return {
     plugins: [
+      vueDevTools(),
+      createHtmlPlugin({}),
       VueRouter({
         dts: "src/typed-router.d.ts",
       }),
