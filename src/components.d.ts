@@ -37,6 +37,7 @@ declare module 'vue' {
     MessageListItem: typeof import('./components/com/MessageListItem.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Separator: typeof import('./components/ui/separator/Separator.vue')['default']
     SerialMonitor: typeof import('./components/SerialMonitor.vue')['default']
     SerialPort: typeof import('./components/serial-port/SerialPort.vue')['default']
     SerialPorts: typeof import('./components/SerialPorts.vue')['default']
