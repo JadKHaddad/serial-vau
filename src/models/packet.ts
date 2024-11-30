@@ -1,4 +1,4 @@
-export type IncomingPacket = {
+export type IncomingPacket  = {
     line: string;
 }
 

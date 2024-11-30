@@ -8,8 +8,8 @@ export const useAppStore = defineStore("app", () => {
   const managedSerialPorts = ref<ManagedSerialPort[]>([]);
   const packets = ref<Record<string, PacketData[]>>({});
 
-  function getSerialPorts() {
-    api
+  async function getSerialPorts() {
+    await api
       .getSerialPorts()
       .then((response) => {
         managedSerialPorts.value = response;

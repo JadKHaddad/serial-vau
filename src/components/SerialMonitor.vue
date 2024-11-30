@@ -19,11 +19,7 @@
       </v-tab>
     </v-tabs>
     <v-tabs-window v-model="selectedPortIndex">
-      <v-tabs-window-item
-        v-for="portName in portNames"
-        :key="portName"
-        value="portName"
-      >
+      <v-tabs-window-item v-for="portName in portNames" :key="portName" value="portName">
         <v-container class="mt-4">
           <v-row>
             <SerialPort v-if="selectedPort" :port="selectedPort"></SerialPort>
@@ -32,32 +28,20 @@
             <MessageList :packets="limitedPackets(portName)" />
           </v-row>
 
-          <v-row
-            v-if="selectedPort && selectedPort.status.type === StatusType.Open"
-          >
-            <v-text-field
-              v-model="portValues[selectedPort.name]"
-              class="mt-4"
-              color="secondary"
-              text-color="primary"
-              variant="outlined"
-              label="Send value as Direct"
-              :append-icon="portValues[selectedPort.name] ? 'mdi-send' : ''"
-              @keydown.enter.prevent="
+          <v-row v-if="selectedPort && selectedPort.status.type === StatusType.Open">
+            <v-text-field v-model="portValues[selectedPort.name]" class="mt-4" color="secondary" text-color="primary"
+              variant="outlined" label="Send value as Direct"
+              :append-icon="portValues[selectedPort.name] ? 'mdi-send' : ''" @keydown.enter.prevent="
                 sendToSerialPortAndClearValue(
                   selectedPort.name,
                   portValues[selectedPort.name]
                 )
-              "
-              @click:append="
+                " @click:append="
                 sendToSerialPortAndClearValue(
                   selectedPort.name,
                   portValues[selectedPort.name]
                 )
-              "
-              clearable
-              @click:clear="clearSerialPortValue(selectedPort.name)"
-            >
+                " clearable @click:clear="clearSerialPortValue(selectedPort.name)">
             </v-text-field>
           </v-row>
         </v-container>

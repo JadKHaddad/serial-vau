@@ -26,6 +26,7 @@ export type ManagedSerialPort = {
     lastUsedOpenOptions: OpenSerialPortOptions;
 }
 
+// TODO: Same name used two times please refactor :=)
 export type IncomigPacket = {
     from: string,
     line: string,
