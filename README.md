@@ -1,6 +1,14 @@
 # Serial Vau
 
-*Welcome to **Serial Vau*** A Monitoring Tool for sending and reaciving data.
+<div style="text-align:center">
+    <img src="./logo.png" />
+</div>
+
+<div style="text-align:center" color="red">
+    Welcome to <b>Serial Vau </b> A Monitoring Tool for sending and reaciving data.
+
+</div>
+
 
 ## Setup
 
